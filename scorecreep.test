@@ -1,0 +1,66 @@
+<?php
+
+/**
+ * @file
+ * Simpletest case for scorecreep module.
+ *
+ * Verify scorecreep functionality.
+ */
+
+/**
+ * Functionality tests for scorecreep module.
+ */
+class ScorecreepTestCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Scorecreep',
+      'description' => 'Verify the custom node type creation.',
+      'group' => 'PSi',
+    );
+  }
+
+  function setUp() {
+    // Enable the module.
+    parent::setUp('scorecreep');
+  }
+
+  /**
+   * Verify the functionality of the example module.
+   */
+  function testNodeCreation() {
+    // Create and login user.
+    $account = $this->drupalCreateUser(array('access content', 'create scorecreep_performance content', 'administer nodes'));
+    $this->drupalLogin($account);
+
+    // Create a new node. The image makes it more complicated, so skip it.
+    $edit = array(
+      'title' => $this->randomName(),
+      'scorecreep_color[und][0][value]' => 'red',
+      'scorecreep_color[und][1][value]' => 'green',
+      'scorecreep_color[und][2][value]' => 'blue',
+      'scorecreep_quantity[und][0][value]' => 100,
+    );
+    $this->drupalPost('node/add/node-example', $edit, t('Save'));
+    $this->assertText("Scorecreep Performance Node " . $edit['title'] . " has been created", "Found node creation message");
+    $this->assertPattern("/The colors available.*red.*green.*blue/", "Correct 'colors available' on node page");
+
+    // Look on the examples page to make sure it shows up there also.
+    $this->drupalGet('examples/scorecreep');
+    $this->assertText($edit['title'], "Found random title string");
+    $this->assertPattern("/red.*green.*blue/", "Correct 'colors available' on node example page");
+
+  }
+
+  /**
+   * Verify the menu item is not there if user doesn't have administer nodes perms.
+   */
+  function testMenuCreation() {
+    $account = $this->drupalCreateUser(array('access content', 'create scorecreep_performance content'));
+    $this->drupalLogin($account);
+    
+    $this->drupalGet['node/add'];
+    $this->assertPattern("/^Performance/", "Scorecreep performance is not on the page.");
+  }
+}
+

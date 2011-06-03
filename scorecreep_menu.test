@@ -1,0 +1,40 @@
+<?php
+
+/**
+ * @file
+ * Simpletest case for scorecreep module.
+ *
+ * Verify scorecreep functionality.
+ */
+
+/**
+ * Functionality tests for scorecreep module.
+ */
+class ScorecreepMenuCase extends DrupalWebTestCase {
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Scorecreep Menu test',
+      'description' => 'Verify the menu is correct.',
+      'group' => 'PSi',
+    );
+  }
+
+  function setUp() {
+    // Enable the module.
+    parent::setUp('scorecreep');
+  }
+
+  /**
+   * Verify the menu item is not there if user doesn't have administer nodes perms.
+   */
+  function testMenuCreation() {
+    $account = $this->drupalCreateUser(array('access content', 'create scorecreep_performance content', 'create article content'));
+    $this->drupalLogin($account);
+    
+    $this->drupalGet['node/add'];
+    $this->assertNoPattern("/Performance/", "Scorecreep performance is not on the page.");
+
+  }
+}
+

@@ -1,0 +1,7 @@
+name = Scorecreep
+description = Score keeping module for PSi.
+package = PSi
+core = 7.x
+dependencies[] = image
+files[] = scorecreep.test
+files[] = scorecreep_menu.test
