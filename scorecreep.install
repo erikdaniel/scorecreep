@@ -78,9 +78,6 @@ function scorecreep_install() {
     field_create_instance($instance);
   }
 
-
-  // Add the scorekeeper role
-  _scorecreep_create_user_roles();
 }
 /**
  * Delete user roles
@@ -216,6 +213,4 @@ function scorecreep_uninstall() {
   // http://api.drupal.org/api/function/field_purge_batch/7
   field_purge_batch(1000);
 
-  // delete the user roles
-  _scorecreep_delete_user_roles();
 }

@@ -14,9 +14,9 @@ class ScorecreepTestCase extends DrupalWebTestCase {
 
   public static function getInfo() {
     return array(
-      'name' => 'Scorecreep',
+      'name' => 'Scorecreep Performance',
       'description' => 'Verify the custom node type creation.',
-      'group' => 'PSi',
+      'group' => 'Scorecreep',
     );
   }
 
@@ -41,7 +41,7 @@ class ScorecreepTestCase extends DrupalWebTestCase {
       'scorecreep_color[und][2][value]' => 'blue',
       'scorecreep_quantity[und][0][value]' => 100,
     );
-    $this->drupalPost('node/add/node-example', $edit, t('Save'));
+    $this->drupalPost('node/add/scorecreep-performance', $edit, t('Save'));
     $this->assertText("Scorecreep Performance Node " . $edit['title'] . " has been created", "Found node creation message");
     $this->assertPattern("/The colors available.*red.*green.*blue/", "Correct 'colors available' on node page");
 
@@ -60,7 +60,36 @@ class ScorecreepTestCase extends DrupalWebTestCase {
     $this->drupalLogin($account);
     
     $this->drupalGet['node/add'];
-    $this->assertPattern("/^Performance/", "Scorecreep performance is not on the page.");
+    $this->assertNoPattern("/Performance/", "Scorecreep performance is not on the page.");
   }
+}
+
+class ScorecreepRolesTestCase extends DrupalWebTestCase {
+  protected $admin_user;
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Scorecreep Roles',
+      'description' => 'Verify the roles have been created.',
+      'group' => 'Scorecreep',
+    );
+  }
+
+  function setUp() {
+    // Enable the module.
+    parent::setUp('scorecreep');
+    $this->admin_user = $this->drupalCreateUser(array('bypass node access', 'administer nodes', 'administer users', 'administer permissions'));
+  }
+
+  function testRolesCreated() {
+    $this->drupalLogin($this->admin_user);
+    $this->drupalGet('admin/people/permissions/roles');
+    $this->assertPattern("/scorekeeper/", "Scorecreeper role exists.");
+    $this->assertPattern("/scores\ admin/", "Scorecreeper role exists.");
+  }
+
+
+
+
 }
 

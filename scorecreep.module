@@ -196,6 +196,11 @@ function scorecreep_enable() {
       user_role_save($role);
     }
   }
+
+  $rl = user_role_load_by_name('scorekeeper');
+  user_role_grant_permissions($rl->rid, array('create scorecreep_performance content', 'edit own scorecreep_performance content'));
+  $rl = user_role_load_by_name('scores admin');
+  user_role_grant_permissions($rl->rid, array('create scorecreep_performance content', 'edit own scorecreep_performance content', 'edit any scorecreep_performance content', 'delete any scorecreep_performance content', 'delete own scorecreep_performance content'));
 }
 
 /**
