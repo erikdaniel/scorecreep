@@ -35,8 +35,8 @@ function scorecreep_install() {
     'type' => 'scorecreep_performance',
     'name' => $t('Scorecreep Performance Node'),
     'base' => 'node_content',
-    'description' => $t('This is an example node type with a few fields.'),
-    'body_label' => $t('Example Description')
+    'description' => $t('This is a performance.'),
+    'body_label' => $t('Performance description')
   );
 
   // Complete the node type definition by setting any defaults not explicitly
@@ -77,8 +77,13 @@ function scorecreep_install() {
     $instance['bundle'] = $sc_performance['type'];
     field_create_instance($instance);
   }
-}
 
+
+  // Add the scorekeeper role
+  _scorecreep_create_user_roles();
+}
+/**
+ * Delete user roles
 /**
  * Returns a structured array defining the fields created by this content type.
  *
@@ -210,4 +215,7 @@ function scorecreep_uninstall() {
   // Purge all field infromation
   // http://api.drupal.org/api/function/field_purge_batch/7
   field_purge_batch(1000);
+
+  // delete the user roles
+  _scorecreep_delete_user_roles();
 }

@@ -52,15 +52,16 @@ function scorecreep_menu() {
 /** 
  * Implements hook_menu_alter().
  */
-function scorecreep_menu_alter(&$callbacks) {
-  // If the user does not have 'administer nodes' permission, 
-  // disable the scorecreep menu item by settings its access callback to FALSE.
-  if (!user_access('administer nodes')) {
-    $callbacks['node/add/scorecreep_performance']['access callback'] = FALSE;
+function scorecreep_menu_alter(&$items) {
+   $items['node/add/scorecreep-performance']['type'] = MENU_CALLBACK;
+   //$items['node/add/scorecreep-performance']['access arguments'] = array('administer nodes');
+   //$callbacks['node/add/scorecreep-performance']['access callback'] = 'user_access';
+   //$callbacks['node/add/scorecreep-performance']['type'] = MENU_CALLBACK;
     // Must unset access args or Drupal will use user_access()
     // as a default access callback.
-    unset($callbacks['node/add/scorecreep_performance']['access arguments']);
-  }
+    // This actually disables access entirely
+   //unset($items['node/add/scorecreep-performance']);
+    
 }
 
 /**
@@ -163,7 +164,7 @@ function scorecreep_help($path, $arg) {
         "The Node Example module provides a custom node type.
         You can create new nodes using the <a href='!nodeadd'>node add form</a>.
         Nodes that you create will be displayed here.",
-        array('!nodeadd' => url('node/add/node-example'))
+        array('!nodeadd' => url('node/add/scorecreep-performance'))
       ) . "</p>";
   }
 }
@@ -179,3 +180,35 @@ function theme_example_node_color($variables) {
   $output = '<span style="background-color: #ccc; padding: 1em; margin-bottom: 1em; float: left; color: ' . $variables['color'] . '">' . $variables['color'] . '</span>';
   return $output;
 }
+
+
+/**
+ * Implementation of hook_enable().
+ *
+ * Add roles.
+ */
+function scorecreep_enable() {
+  $newRoles = array('scorekeeper', 'scores admin');
+  foreach ($newRoles as $r){
+    if(!user_role_load_by_name($r)){
+      $role = new stdClass();
+      $role->name = $r;
+      user_role_save($role);
+    }
+  }
+}
+
+/**
+ * Implements hook_disbale.
+ */
+function scorecreep_disable() {
+  $scRoles = array('scorekeeper', 'scores admin');
+  $roles = user_roles();
+  foreach ($scRoles as $r) {
+    if(in_array($r, $roles)) {
+      user_role_delete($r);
+    }
+  }
+}
+
+
