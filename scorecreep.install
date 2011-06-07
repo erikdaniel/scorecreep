@@ -14,10 +14,7 @@
 /**
  * Implements hook_install().
  *
- * - Add the body field.
- * - Configure the body field.
- * - Create color, quantity, and image fields.
- * - Create color, quantity, and image instances.
+ * - Add the scorecreep_performance content type
  *
  * @see node_type_set_defaults()
  * @see field_info_instance()
@@ -36,14 +33,14 @@ function scorecreep_install() {
     'name' => $t('Scorecreep Performance Node'),
     'base' => 'node_content',
     'description' => $t('This is a performance.'),
-    'body_label' => $t('Performance description')
+    //'body_label' => $t('Performance description')
   );
 
   // Complete the node type definition by setting any defaults not explicitly
   // declared above.
   // http://api.drupal.org/api/function/node_type_set_defaults/7
   $content_type = node_type_set_defaults($sc_performance);
-  node_add_body_field($content_type);
+  //node_add_body_field($content_type);
 
   // Save the content type
   node_type_save($content_type);
@@ -51,18 +48,20 @@ function scorecreep_install() {
 
   // Load the instance definition for our content type's body
   // http://api.drupal.org/api/function/field_info_instance/7
-  $body_instance = field_info_instance('node', 'body', 'scorecreep_performance');
+  //$body_instance = field_info_instance('node', 'body', 'scorecreep_performance');
 
   // Add our scorecreep_performance_list view mode to the body instance display by
   // instructing the body to display as a summary
+  /*
   $body_instance['display']['scorecreep_performance_list'] = array(
     'label' => 'hidden',
     'type' => 'text_summary_or_trimmed',
   );
+  */
 
   // Save our changes to the body field instance.
   // http://api.drupal.org/api/function/field_update_instance/7
-  field_update_instance($body_instance);
+  //field_update_instance($body_instance);
 
   // Create all the fields we are adding to our content type.
   // http://api.drupal.org/api/function/field_create_field/7
@@ -90,22 +89,22 @@ function scorecreep_install() {
 function _scorecreep_installed_fields() {
   $t = get_t();
   return array(
-    'scorecreep_color' => array(
-      'field_name' => 'scorecreep_color',
+    'scorecreep_score' => array(
+      'field_name' => 'scorecreep_score',
       'cardinality' => 3,
       'type'        => 'text',
       'settings'    => array(
-        'max_length' => 60,
+        'max_length' => 4,
       ),
     ),
-    'scorecreep_quantity' => array(
-      'field_name'  => 'scorecreep_quantity',
+    'scorecreep_group' => array(
+      'field_name'  => 'scorecreep_group',
       'cardinality' => 1,
       'type'        => 'text',
     ),
-    'scorecreep_image' => array(
-      'field_name' => 'scorecreep_image',
-      'type'       => 'image',
+    'scorecreep_tiebreakwinner' => array(
+      'field_name' => 'scorecreep_tiebreakwinner',
+      'type'       => 'text',
       'cardinality' => 1,
     ),
   );
@@ -126,22 +125,23 @@ function _scorecreep_installed_fields() {
 function _scorecreep_installed_instances() {
   $t = get_t();
   return array(
-    'scorecreep_color' => array(
-      'field_name' => 'scorecreep_color',
-      'label'       => $t('The colors available for this object.'),
+    'scorecreep_core' => array(
+      'field_name' => 'scorecreep_score',
+      'label'       => $t('The total score the performance recieved.'),
       'widget'      => array(
         'type'    => 'text_textfield',
       ),
       'display' => array(
         'scorecreep_performance_list' => array(
           'label' => 'hidden',
-          'type' => 'scorecreep_colors',
+          'type' => 'scorecreep_score',
         ),
       ),
     ),
-    'scorecreep_quantity' => array(
-      'field_name'  => 'scorecreep_quantity',
-      'label' => $t('Quantity required'),
+    'scorecreep_group' => array(
+      'field_name'  => 'scorecreep_group',
+      'label' => $t('Group piece'),
+      'required'    => FALSE,
       'type'        => 'text',
       'widget'      => array(
         'type'    => 'text_textfield',
@@ -153,18 +153,18 @@ function _scorecreep_installed_instances() {
         ),
       ),
     ),
-    'scorecreep_image' => array(
-      'field_name'  => 'scorecreep_image',
-      'label'       => $t('Upload an image:'),
+    'scorecreep_tiebreakwinner' => array(
+      'field_name'  => 'scorecreep_tiebreakwinner',
+      'label'       => $t('Tie Break Winner:'),
       'required'    => FALSE,
       'widget' => array(
-        'type'    => 'image_image',
+        'type'    => 'text',
         'weight'  => 2.10,
       ),
       'display' => array(
         'scorecreep_performance_list' => array(
           'label' => 'hidden',
-          'type' => 'image_link_content__thumbnail',
+          'type' => 'hidden',
         ),
       ),
     ),
@@ -185,6 +185,8 @@ function scorecreep_uninstall() {
   foreach ($result as $row) {
     $nids[] = $row->nid;
   }
+
+  // TODO we will have to delete all the ref tables as well.
 
   // Delete all the nodes at once
   // http://api.drupal.org/api/function/node_delete_multiple/7

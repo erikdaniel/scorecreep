@@ -53,6 +53,12 @@ function scorecreep_menu() {
  * Implements hook_menu_alter().
  */
 function scorecreep_menu_alter(&$items) {
+
+  $items['node/add/scorecreep-performance']['access callback'] = 'user_access';
+  $items['node/add/scorecreep-performance']['access arguments'] = array('create scorecreep_performance content');
+  // TODO I'm so fucking tired of this bullshit, the following line SHOULD
+  // set the page as a callack ONLY, and remove it from the node/add menu
+  // but IT FUCKING DOESN"T FUCKING WORK. FUCK THIS SHIT
    $items['node/add/scorecreep-performance']['type'] = MENU_CALLBACK;
    //$items['node/add/scorecreep-performance']['access arguments'] = array('administer nodes');
    //$callbacks['node/add/scorecreep-performance']['access callback'] = 'user_access';

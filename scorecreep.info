@@ -4,4 +4,6 @@ package = PSi
 core = 7.x
 dependencies[] = image
 files[] = scorecreep.test
+files[] = scorecreep.install
+files[] = scorecreep.module
 files[] = scorecreep_menu.test
