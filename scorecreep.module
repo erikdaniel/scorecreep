@@ -102,6 +102,12 @@ function scorecreep_menu() {
   return $items;
 }
 
+/** 
+ * Callback to return the node id from a given string.
+ *
+ * @param $str
+ *  A bout node id OR bout node alias.
+ */
 function bout_id_or_alias_load($str) {
   $bid = false;
   if (is_int($str)) {
@@ -115,7 +121,6 @@ function bout_id_or_alias_load($str) {
     }
   }
   return $bid;
-
 }
 
 /**
@@ -129,16 +134,7 @@ function performance_add($bout) {
   $node = (object) array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => LANGUAGE_NONE);
   drupal_set_title(t('Add @name to Bout @bout', array('@name' => $types[$type]->name, '@bout' => $bout)), PASS_THROUGH);
   $output = drupal_get_form($type . '_node_form', $node, (object)array('bout_id' => $bout));
-  dvm($node);
   return $output;
-}
-
-
-/**
- * Implements hook_view().
- */
-function scorecreep_node_view_alter(&$build) {
-  //dvm($build);
 }
 
 
@@ -150,20 +146,36 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
   $bout_id = isset($form_state['build_info']['args'][1]->bout_id) ? $form_state['build_info']['args'][1]->bout_id:null;
   // only edit the form if we are in a bout/%/performance/add
   if ($bout_id) {
-  //dvm($form_state['build_info']['args'][1]->bout_id);
-    // TODO just messing about
+    $form_state['scorecreep']['bout'] = $bout_id;
+
+    // TODO remove - just messing about
     $form['description'] = array(
       '#type' => 'item',
       '#title' => t('The current bout is @bout', array('@bout' => $bout_id)),
       '#description' => t('Waddup'),
     );
 
-    // Converting the bout from textfield to 'value' so its not exposed in this form
+     // Converting the bout from textfield to 'value' so its not exposed in this form
     $form['field_perf_bout']['und'][0]['value']['#type'] = 'value';
     $form['field_perf_bout']['und'][0]['value']['#value'] =  $bout_id;
+
+
+    // Add our custom submit handler.
+    $form['actions']['submit']['#submit'][] = 'scorecreep_performance_set_redirect'; 
   }
 
-  //dvm($form);
+  //dvm($form_state);
+}
+
+
+/**
+ * Handler to set the redirect on a performance submit
+ * back to the bout.
+ */
+function scorecreep_performance_set_redirect( $form, &$form_state) {
+  $bout_id = $form_state['scorecreep']['bout'];
+  $alias = drupal_lookup_path('alias', 'node/' . $bout_id);
+  $form_state['redirect'] = $alias;
 }
 
 /**
@@ -174,12 +186,44 @@ function bout_page_title($node) {
 }
 
 /**
- * This is a test.
+ * Implements hook_block_info().
  */
-function scorecreep_form_alter(&$form, $form_state, $form_id) {
-  //drupal_set_message('THE FORM ID IS:'.$form_id);
+function scorecreep_block_info() {
+  $blocks = array();
+
+  $scores = _scorecreep_get_bout_scores();
+
+  $blocks['bout_scores'] = array(
+    'info' => t('Display scores and ranks for bout.'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+
+  return $blocks;
 }
 
+/**
+TODO Convert this join:
+SELECT field_score_value FROM field_data_field_score as fs
+LEFT JOIN field_data_field_performance_team AS fdfpt
+ON fdfs.entity_id = fdfpt.entity_id
+LEFT JOIN field_data_field_perf_bout AS fb
+ON fdfs.entity_id = fb.entity_id
+AND fb.field_perf_bout_value = :val
+*/
+
+function _scorecreep_get_bout_scores() {
+  $scores = '';
+  $sql = 'SELECT nid FROM {node} n WHERE n.type = :type AND n.status = :status';
+  $result = db_query($sql,
+    array(
+      ':type' => 'scorecreep_performance',
+      ':status' => 1,
+    )
+  );
+
+
+  return $scores;
+}
 /** 
  * Implements hook_menu_alter().
  */
@@ -226,7 +270,6 @@ function scorecreep_page() {
  *   a build array
  */
 function bout_page_view($node) {
-  //dvm($node);
     // If there is a menu link to this node, the link becomes the last part
   // of the active trail, and the link name becomes the page title.
   // Thus, we must explicitly set the page title to be the node title.
