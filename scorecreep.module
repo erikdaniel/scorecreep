@@ -191,15 +191,88 @@ function bout_page_title($node) {
 function scorecreep_block_info() {
   $blocks = array();
 
-  $scores = _scorecreep_get_bout_scores();
-
   $blocks['bout_scores'] = array(
     'info' => t('Display scores and ranks for bout.'),
     'cache' => DRUPAL_NO_CACHE,
   );
-
   return $blocks;
 }
+
+
+function scorecreep_block_view($delta = '') {
+  $output = '';
+  if ($delta == 'bout_scores') {
+    $scores = _scorecreep_get_bout_scores('7');
+    $entries = _scorecreep_parse_bout_scores($scores);
+
+    if (!empty($entries)) {
+      foreach ($entries as $entry) {
+        // Sanitize the data before handing it off to the theme layer.
+        $rows[] = array_map('check_plain', $entry);
+      }
+      // Make a table for them.
+      $header = array(t('Team'), t('Rank'), t('Score'));
+      $output .= theme('table', array('header' => $header, 'rows' => $rows));
+    }
+    else {
+      $output = t('No scores in this bout.');
+    }
+
+    $block = array(
+      'subject' => t('Total Scores'),
+      'content' => $output,
+    );
+    return $block;
+  }
+}
+
+function _scorecreep_parse_bout_scores($scores) {
+  $bout_scores = array();
+  $bout_ranks = array();
+  if (!empty($scores)) {
+    foreach ($scores as $entry) {
+      // Sanitize the data before handing it off to the theme layer.
+      $score = array_map('check_plain', $entry);
+      if (!array_key_exists($score['field_performance_team_nid'], $bout_scores)) {
+        $bout_scores[$score['field_performance_team_nid']] = array(
+          'team_id' => $score['field_performance_team_nid'],
+          'score' => $score['field_score_value'],
+        );
+      }
+      else {
+        $bout_scores[$score['field_performance_team_nid']]['score'] +=  $score['field_score_value'];
+      }
+    }
+    // TODO handle ties
+    array_sort_by_subval($bout_scores, "score");
+    $i = 1;
+    foreach ($bout_scores as $score) {
+      $bout_ranks[] = array(
+        'team_id' => $score['team_id'],
+        'rank' => $i++,
+        'score' => $score['score'],
+      );
+    }
+  }
+  return $bout_ranks;
+}
+
+function array_sort_by_subval(&$array, $key) {
+    foreach($array as &$v) {
+        $v['__________'] = $v[$key];
+    }
+    usort($array, 'sort_by_underscores');
+    foreach($array as &$v) {
+        unset($v['__________']);
+    }
+}
+
+function sort_by_underscores($a, $b) {
+    if($a['__________'] == $b['__________']) return 0;
+    if($a['__________'] > $b['__________']) return -1;
+    return 1;
+}
+
 
 /**
 TODO Convert this join:
@@ -209,19 +282,43 @@ ON fdfs.entity_id = fdfpt.entity_id
 LEFT JOIN field_data_field_perf_bout AS fb
 ON fdfs.entity_id = fb.entity_id
 AND fb.field_perf_bout_value = :val
+
+
+$query = db_select('node', 'n');
+$query->fields('n', array('nid, title'));
+$u_alias = $query->innerJoin('users' ,'u', '%alias.uid = n.uid');
+$query->addField($u_alias, 'name', 'username');
+$query->condition("{$u_alias}.name", 'Bob');
+$query->condition('n.created', REQUEST_TIME - 604800, '>=');
+$query->orderBy('n.created', 'DESC');
+$query->range(0, 5);
+$query->addTag('node_access');
+$result = $query->execute();
 */
 
-function _scorecreep_get_bout_scores() {
+function _scorecreep_get_bout_scores($bout_id) {
   $scores = '';
-  $sql = 'SELECT nid FROM {node} n WHERE n.type = :type AND n.status = :status';
-  $result = db_query($sql,
-    array(
-      ':type' => 'scorecreep_performance',
-      ':status' => 1,
-    )
-  );
+  //$sql = 'SELECT nid FROM {node} n WHERE n.type = :type AND n.status = :status';
+  /*
+  $sql = "SELECT field_score_value FROM field_data_field_score as fs " .
+          "LEFT JOIN field_data_field_performance_team AS fdfpt " .
+          "ON fs.entity_id = fdfpt.entity_id " .
+          "LEFT JOIN field_data_field_perf_bout AS fb " .
+          "ON fs.entity_id = fb.entity_id " .
+          "AND fb.field_perf_bout_value = :val";
+  $result = db_query($sql, array(':val' => $bout_id));
+  */
+  $query = db_select('field_data_field_score', 'fs');
+  $query->leftJoin('field_data_field_performance_team', 'pt', 'pt.entity_id = fs.entity_id');
+  $query->leftJoin('field_data_field_perf_bout', 'fb', 'fb.entity_id = fs.entity_id');
+  $query->addField('pt', 'field_performance_team_nid');
+  $query->addField('fs', 'field_score_value');
+  $query->condition("fb.field_perf_bout_value", $bout_id);  
 
-
+  //$result = $query->execute();
+  //*/
+  $scores = $query->execute()->fetchAll(PDO::FETCH_ASSOC);
+  //$scores = $result->fetchAll();
   return $scores;
 }
 /** 
