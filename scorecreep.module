@@ -173,15 +173,21 @@ function scorecreep_block_info() {
     'info' => t('Display scores and ranks for bout.'),
     'cache' => DRUPAL_NO_CACHE,
   );
+  $blocks['team_scores'] = array(
+    'info' => t('Display scores and ranks for a team.'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+
   return $blocks;
 }
 
 
 function scorecreep_block_view($delta = '') {
   $output = '';
-   
-  if ($delta == 'bout_scores') {
-    $path = explode('/', request_path());
+  $path = explode('/', request_path());
+  switch ($delta) {
+    case 'bout_scores':
+    $subject = t('Total Scores');
     if ($path[0] == 'scorecreep' && $path[1] == 'bout') {
       $bout_id = bout_id_or_alias_load($path[2]);
       $scores = _scorecreep_get_bout_scores($bout_id);
@@ -203,13 +209,34 @@ function scorecreep_block_view($delta = '') {
     else {
       $output = t('No bout id.');
     }
+    break;
 
-    $block = array(
-      'subject' => t('Total Scores'),
-      'content' => $output,
-    );
-    return $block;
+  case 'team_scores':
+    $team = array();
+    $subject = t('Team Scores');
+    $output = t('No ranks or scores for this team yet.');
+    if ($path[0] == 'node' && is_numeric($path[1])) {
+      $team = node_load($path[1]);
+      $ranks = _scorecreep_get_ranks_for_team($team);
+      if (!empty($ranks)) {
+        foreach ($ranks as $r) {
+          $rows[] = array_map('check_plain', $r);
+        }
+        $header = array(t('Bout'), t('Rank'), t('Score'));
+        $output .= theme('table', array('header' => $header, 'rows' => $rows));
+      }
+      else {
+        $output = t('No ranks or scores for this team yet.');
+      }
+    }
+    break;
   }
+
+  $block = array(
+    'subject' => $subject,
+    'content' => $output,
+  );
+  return $block;
 }
 
 

@@ -92,7 +92,6 @@ function sort_by_underscores($a, $b) {
  * Load team nodes.
  */
 function _scorecreep_get_team_names(&$teams) {
-  print_r($teams);
   $result = db_select('node', 'n')
     ->fields('n', array('title'))
     ->condition('nid', $teams)
@@ -115,9 +114,41 @@ function _scorecreep_get_bout_scores($bout_id) {
 /**
  * Get team ranks.
  */
-function _scorecreep_get_ranks_for_team($team_id) {
+function _scorecreep_get_ranks_for_team(&$team) {
   $ranks = array();
+  $terms = array();
+  $nodes = array();
+  $bouts = array();
 
+  // get bouts this team is associated with (via taxonomy)
+  foreach ($team->field_team_bouts['und'] as $bout) {
+    $terms[] = $bout['tid'];
+  }
+  for ($i = 0; $i < count($terms); $i++) {
+    $nodes = array_merge($nodes, (array)taxonomy_select_nodes($terms[$i]));
+  }
+  $bouts = node_load_multiple($nodes);
+  //print_r($bouts);
 
-  return $ranks;
+  // get scores and ranks for each bout
+  foreach ($bouts as $bout) {
+    if ($bout->type == 'scorecreep_bout') {
+      //$ranks[] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($bout->nid));
+      $ranks[$bout->nid] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($bout->nid));
+    }
+  }
+  $team_ranks = array();
+  //for ($i = 0; $i < count($ranks); $i++) {
+  foreach ($ranks as $key => $rank) {
+    for ($j = 0; $j<count($rank); $j++) {
+      if ($rank[$j]['team'] == $team->title) {
+        $team_ranks[] = array(
+          'bout' => $key,
+          'rank' => $rank[$j]['rank'],
+          'score' => $rank[$j]['score'],
+        );
+      }
+    }
+  }
+  return $team_ranks;
 }
