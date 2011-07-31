@@ -7,6 +7,11 @@
  *  A bout node id OR bout node alias.
  */
 function bout_id_or_alias_load($str) {
+  /* This may be a better way
+  if (arg(0) == 'node') {
+      $nid = arg(1);
+  }
+  */
   $bid = FALSE;
   if (is_int($str)) {
     $bid = $str;
@@ -100,13 +105,14 @@ function _scorecreep_get_team_names(&$teams) {
 }
 
 function _scorecreep_get_bout_scores($bout_id) {
+  // should just load nodes by taxonomy
   $scores = '';
   $query = db_select('field_data_field_score', 'fs');
   $query->leftJoin('field_data_field_performance_team', 'pt', 'pt.entity_id = fs.entity_id');
-  $query->leftJoin('field_data_field_perf_bout', 'fb', 'fb.entity_id = fs.entity_id');
+  $query->leftJoin('field_data_field_bout', 'fb', 'fb.entity_id = fs.entity_id');
   $query->addField('pt', 'field_performance_team_nid');
   $query->addField('fs', 'field_score_value');
-  $query->condition("fb.field_perf_bout_value", $bout_id);  
+  $query->condition("fb.field_bout_tid", $bout_id);  
   $scores = $query->execute()->fetchAll(PDO::FETCH_ASSOC);
 
   return $scores;
@@ -126,17 +132,23 @@ function _scorecreep_get_ranks_for_team(&$team) {
   }
   for ($i = 0; $i < count($terms); $i++) {
     $nodes = array_merge($nodes, (array)taxonomy_select_nodes($terms[$i]));
+    $x = taxonomy_term_load($terms[$i]);
+    print_r($x);
+    $ranks[$x->name] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($terms[$i]));
   }
+/*
   $bouts = node_load_multiple($nodes);
   //print_r($bouts);
 
   // get scores and ranks for each bout
   foreach ($bouts as $bout) {
+      print_r($bout->type); 
     if ($bout->type == 'scorecreep_bout') {
-      //$ranks[] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($bout->nid));
-      $ranks[$bout->nid] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($bout->nid));
+      //$ranks[$bout->nid] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($bout->nid));
+      $ranks[$bout->nid] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($bout->field_bout['und'][0]['tid']));
     }
   }
+*/
   $team_ranks = array();
   //for ($i = 0; $i < count($ranks); $i++) {
   foreach ($ranks as $key => $rank) {

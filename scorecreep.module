@@ -177,7 +177,6 @@ function scorecreep_block_info() {
     'info' => t('Display scores and ranks for a team.'),
     'cache' => DRUPAL_NO_CACHE,
   );
-
   return $blocks;
 }
 
@@ -190,6 +189,9 @@ function scorecreep_block_view($delta = '') {
     $subject = t('Total Scores');
     if ($path[0] == 'scorecreep' && $path[1] == 'bout') {
       $bout_id = bout_id_or_alias_load($path[2]);
+      if ($node = menu_get_object()) {
+        $bout_id = $node->field_bout['und'][0]['tid'];
+      }
       $scores = _scorecreep_get_bout_scores($bout_id);
       $entries = _scorecreep_parse_bout_scores($scores);
 
@@ -224,9 +226,6 @@ function scorecreep_block_view($delta = '') {
         }
         $header = array(t('Bout'), t('Rank'), t('Score'));
         $output .= theme('table', array('header' => $header, 'rows' => $rows));
-      }
-      else {
-        $output = t('No ranks or scores for this team yet.');
       }
     }
     break;
