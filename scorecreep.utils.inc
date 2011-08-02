@@ -62,6 +62,7 @@ function _scorecreep_parse_bout_scores($scores) {
     $i = 1;
     foreach ($bout_scores as $score) {
       $bout_ranks[] = array(
+        'teamid' => $score['team_id'],
         'team' => $team_names[$score['team_id']]->title,
         'rank' => $i++,
         'score' => $score['score'],
@@ -131,9 +132,9 @@ function _scorecreep_get_ranks_for_team(&$team) {
     $terms[] = $bout['tid'];
   }
   for ($i = 0; $i < count($terms); $i++) {
-    $nodes = array_merge($nodes, (array)taxonomy_select_nodes($terms[$i]));
+    //$nodes = array_merge($nodes, (array)taxonomy_select_nodes($terms[$i]));
     $x = taxonomy_term_load($terms[$i]);
-    print_r($x);
+    //print_r($x);
     $ranks[$x->name] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($terms[$i]));
   }
 /*
@@ -163,4 +164,76 @@ function _scorecreep_get_ranks_for_team(&$team) {
     }
   }
   return $team_ranks;
+}
+
+function _scorecreep_get_teams_in_bout($tid) {
+  $nids = (array)taxonomy_select_nodes($tid, FALSE);
+  // loop through this and check if these nodes are teams or not 
+
+}
+
+function _scorecreep_get_all_opponenents(&$team) {
+  // get all the bouts
+  foreach ($team->field_team_bouts['und'] as $bout) {
+    $terms[] = $bout['tid'];
+  }
+  // get all the teams in the bouts that are not this team
+  // using _scorecreep_get_teams_in_bout()
+}
+
+function sort_total_ranks($ranks) {
+  foreach ($ranks as $key => $row) {
+    $rank[$key]  = $row['total_rank'];
+    $score[$key] = $row['total_score'];
+  }
+
+// Sort the data with volume descending, edition ascending
+// Add $data as the last parameter, to sort by the common key
+  array_multisort($rank, SORT_ASC, $score, SORT_DESC, $ranks);
+  return $ranks;
+}
+
+function _scorecreep_get_ranks_for_all_teams($tourney_id) {
+  // get all team nids
+  $nids = (array)taxonomy_select_nodes($tourney_id, FALSE);
+  $nodes = node_load_multiple($nids);
+  $ranks = array();
+  //$nodes = (array)taxonomy_select_nodes($tid[0]);
+  //print_r($nodes);
+
+  // loop though team array and set ranks for each
+  if (isset($nodes)) {
+    foreach ($nodes as $node) {
+      if ($node->type == 'scorecreep_team') {
+        $team = $node;
+        $team->scorecreep_ranks = _scorecreep_get_ranks_for_team($team);
+        $team->scorecreep_total_rank = null;
+        $team->scorecreep_total_score = 0;
+
+        $team_rank['title'] = $team->title;
+
+        // get total rank
+        for ($i = 0; $i < count($team->scorecreep_ranks); $i++) {
+          $rank_label = 'rank' . $i; 
+          $score_label = 'score' . $i; 
+          $team_rank[$rank_label] = $team->scorecreep_ranks[$i]['rank'];
+          $team_rank[$score_label] = $team->scorecreep_ranks[$i]['score'];
+          $team->scorecreep_total_rank += $team->scorecreep_ranks[$i]['rank']; 
+          $team->scorecreep_total_score += $team->scorecreep_ranks[$i]['score']; 
+        }
+        //print $team->title . " rank: " . $team->scorecreep_total_rank . " score: " . $team->scorecreep_total_score . "<br />";
+        $team_rank['total_rank'] = $team->scorecreep_total_rank;
+        $team_rank['total_score'] = $team->scorecreep_total_score;
+        $ranks[] = $team_rank;
+      }
+      
+    }
+
+    $ranks = sort_total_ranks($ranks);
+  }
+
+  // get relative strength
+
+  // return array
+  return $ranks;
 }

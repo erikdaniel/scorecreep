@@ -46,6 +46,14 @@ function scorecreep_menu() {
     'access arguments' => array('access content'),
     'title' => 'PSi Scorecreep',
   );
+  $items['scorecreep/%/scores'] = array(
+    'title callback' => 'tournament_scores_page_title',
+    'title arguments' => array(1),
+    'page callback' => 'tournament_scores_page',
+    'page arguments' => array(1),
+    'access callback' => 'node_access',
+    'access arguments' => array('view', 2),
+  );
   $items['scorecreep/bout/%node'] = array(
     'title callback' => 'bout_page_title',
     'title arguments' => array(2),
@@ -163,6 +171,10 @@ function bout_page_title($node) {
   return '';
 }
 
+function tournament_scores_page_title($term) {
+  return "Tournament $term";// this isn't safe
+}
+
 /**
  * Implements hook_block_info().
  */
@@ -198,7 +210,11 @@ function scorecreep_block_view($delta = '') {
       if (!empty($entries)) {
         foreach ($entries as $entry) {
           // Sanitize the data before handing it off to the theme layer.
-          $rows[] = array_map('check_plain', $entry);
+          $e = array_map('check_plain', $entry);
+          $rows[] = array('team' => $e['team'], 
+                          'rank' => $e['rank'],
+                          'score' => $e['score']
+                          );
         }
         // Make a table for them.
         $header = array(t('Team'), t('Rank'), t('Score'));
@@ -277,6 +293,23 @@ function scorecreep_page() {
   */
   // TODO List tournaments
   return t('Welcome to the PSi Scorecreep.');
+}
+
+
+function tournament_scores_page($term) {
+  $totals = _scorecreep_get_ranks_for_all_teams(1);
+  $output = t('Welcome to the PSi Scorecreep. @term', array('@term' => $term));
+  if (!empty($totals)) {
+    foreach ($totals as $r) {
+      $rows[] = array_map('check_plain', $r);
+    }
+    $header = array(t('Team'), t('Bout 1 Rank'), t('Bout 1 Score'), t('Bout 2 Rank'),  t('Bout 2 Score'), t('Total Rank'), t(' Total Score'));
+    $output .= theme('table', array('header' => $header, 'rows' => $rows));
+  }
+  else {
+    $output .= t('There are no bouts recorded for this tournament yet.');
+  }
+  return $output;
 }
 
 /**
