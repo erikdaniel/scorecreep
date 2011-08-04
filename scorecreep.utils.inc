@@ -166,19 +166,51 @@ function _scorecreep_get_ranks_for_team(&$team) {
   return $team_ranks;
 }
 
-function _scorecreep_get_teams_in_bout($tid) {
+function _scorecreep_get_teams_in_bout($tid, &$teams) {
   $nids = (array)taxonomy_select_nodes($tid, FALSE);
-  // loop through this and check if these nodes are teams or not 
-
+  $teams_in_bout = array();
+  for ($i = 0; $i < count($nids); $i++) {
+    foreach( $teams as $team) {
+      if ($team->nid == $nids[$i]) {
+        $teams_in_bout[] = $team->nid;
+      }
+    }
+  }
+  return $teams_in_bout;
 }
 
-function _scorecreep_get_all_opponenents(&$team) {
-  // get all the bouts
+function _scorecreep_get_all_opponents(&$team, &$teams) {
+  $opponents = array();
+  $teams_in_bout = array();
+  // get all the teams in both bouts
   foreach ($team->field_team_bouts['und'] as $bout) {
-    $terms[] = $bout['tid'];
+    $teams_in_bout = array_merge(_scorecreep_get_teams_in_bout($bout['tid'], $teams), $teams_in_bout);
   }
-  // get all the teams in the bouts that are not this team
-  // using _scorecreep_get_teams_in_bout()
+
+  for ($i = 0; $i < count($teams_in_bout); $i++) {
+    if ($teams_in_bout[$i] == $team->nid) {
+      continue;
+    }
+    $opponents[] = $teams_in_bout[$i];
+  }
+  // get nids for all the nodes in the bouts
+  // this might not work with an array?
+  // $nids = (array)taxonomy_select_nodes($terms, FALSE); 
+  // go through the nids
+  return $opponents;
+}
+
+function _scorecreep_get_relative_strength(&$teams) {
+  foreach ($teams as $id => $team) {
+    $ranks = 0;
+    $opponents = _scorecreep_get_all_opponents($team, $teams); 
+    for ($i = 0; $i < count($opponents); $i++) {
+      $ranks += $teams[$opponents[$i]]->scorecreep_total_rank;  
+    }
+    if (count($opponents) > 0) { 
+      $team->scorecreep_relative_strength = $ranks/count($opponents);
+    }
+  }
 }
 
 function sort_total_ranks($ranks) {
@@ -187,8 +219,8 @@ function sort_total_ranks($ranks) {
     $score[$key] = $row['total_score'];
   }
 
-// Sort the data with volume descending, edition ascending
-// Add $data as the last parameter, to sort by the common key
+  // Sort the data with rank ascending, score descending
+  // Add $ranks as the last parameter, to sort by the common key
   array_multisort($rank, SORT_ASC, $score, SORT_DESC, $ranks);
   return $ranks;
 }
@@ -197,6 +229,7 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
   // get all team nids
   $nids = (array)taxonomy_select_nodes($tourney_id, FALSE);
   $nodes = node_load_multiple($nids);
+  $teams = array();
   $ranks = array();
   //$nodes = (array)taxonomy_select_nodes($tid[0]);
   //print_r($nodes);
@@ -209,7 +242,6 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
         $team->scorecreep_ranks = _scorecreep_get_ranks_for_team($team);
         $team->scorecreep_total_rank = null;
         $team->scorecreep_total_score = 0;
-
         $team_rank['title'] = $team->title;
 
         // get total rank
@@ -224,11 +256,16 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
         //print $team->title . " rank: " . $team->scorecreep_total_rank . " score: " . $team->scorecreep_total_score . "<br />";
         $team_rank['total_rank'] = $team->scorecreep_total_rank;
         $team_rank['total_score'] = $team->scorecreep_total_score;
+        $teams[$team->nid] = $team;
         $ranks[] = $team_rank;
       }
-      
     }
+    // set ranks
+    _scorecreep_get_relative_strength($teams);
 
+    for ($i = 0; $i < count($ranks); $i++) {
+      //$ranks[$i]['relative_strength'] = 
+    }
     $ranks = sort_total_ranks($ranks);
   }
 
