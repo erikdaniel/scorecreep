@@ -303,7 +303,7 @@ function tournament_scores_page($term) {
     foreach ($totals as $r) {
       $rows[] = array_map('check_plain', $r);
     }
-    $header = array(t('Team'), t('Bout 1 Rank'), t('Bout 1 Score'), t('Bout 2 Rank'),  t('Bout 2 Score'), t('Total Rank'), t(' Total Score'));
+    $header = array(t('Place'), t('Team'), t('Bout 1 Rank'), t('Bout 1 Score'), t('Bout 2 Rank'),  t('Bout 2 Score'), t('Total Rank'), t('Strength'), t(' Total Score'));
     $output .= theme('table', array('header' => $header, 'rows' => $rows));
   }
   else {

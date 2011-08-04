@@ -1,4 +1,5 @@
 <?php
+define("NUM_ROTATIONS", 4);
 
 /** 
  * Callback to return the node id from a given string.
@@ -42,34 +43,81 @@ function _scorecreep_parse_bout_scores($scores) {
   $bout_ranks = array();
   $teams = array();
   if (!empty($scores)) {
-    foreach ($scores as $entry) {
+    foreach ($scores as $raw_score) {
       // Sanitize the data before handing it off to the theme layer.
-      $score = array_map('check_plain', $entry);
+      $score = array_map('check_plain', $raw_score);
       if (!array_key_exists($score['field_performance_team_nid'], $bout_scores)) {
-        $bout_scores[$score['field_performance_team_nid']] = array(
-          'team_id' => $score['field_performance_team_nid'],
-          'score' => $score['field_score_value'],
-        );
+          $bout_scores[$score['field_performance_team_nid']] = array(
+            'team_id' => $score['field_performance_team_nid'],
+            'score' => $score['field_score_value'],
+          );
         $teams[] = $score['field_performance_team_nid'];
       }
       else {
-        $bout_scores[$score['field_performance_team_nid']]['score'] +=  $score['field_score_value'];
+        $bout_scores[$score['field_performance_team_nid']]['score'] +=  (float)$score['field_score_value'];
+      }
+      if ($score['field_rotation_value'] > NUM_ROTATIONS && $score['field_tiebreakwinner_value'] == 0) {
+        $bout_scores[$score['field_performance_team_nid']]['tiebreakloser'] = TRUE;
+      }
+      else {
+        $bout_scores[$score['field_performance_team_nid']]['tiebreakloser'] = FALSE;
       }
     }
     // TODO handle ties
     array_sort_by_subval($bout_scores, "score");
     $team_names = node_load_multiple($teams);
-    $i = 1;
     foreach ($bout_scores as $score) {
       $bout_ranks[] = array(
         'teamid' => $score['team_id'],
         'team' => $team_names[$score['team_id']]->title,
-        'rank' => $i++,
-        'score' => $score['score'],
+        'rank' => 1,
+        'score' => round($score['score'], 1),
+        'tiebreakloser' => $score['tiebreakloser'],
       );
     }
   }
+  $bout_ranks = _scorecreep_get_bout_rank($bout_ranks);
+
+  usort($bout_ranks, "array_sort_by_rank");
+
   return $bout_ranks;
+}
+
+/**
+ * Get the rank of a team from an array.
+ * @param {object} team object
+ * @param {array} object sorted by score
+ * @return {integer} rank
+ */
+function _scorecreep_get_bout_rank($scores) {
+  $rank = 0;
+  $prev_val = -1;
+  for($i = 0; $i < count($scores); $i++) {
+    if ($i == 0 || $prev_val != $scores[$i]['score']) {
+      $rank = $i + 1;
+    }
+    $scores[$i]['rank'] = $rank;
+    // handle ties for first
+    if ($scores[$i]['tiebreakloser']) {
+      $scores[$i]['rank'] = $scores[$i]['rank'] + 1;
+    }
+    $prev_val = $scores[$i]['score'];
+  }
+  return $scores;
+}
+
+function array_sort_by_rank($a, $b) {
+  if ($a['rank'] == $b['rank']) {
+    return 0;
+  }
+  return ($a['rank'] < $b['rank']) ? -1 : 1;
+}
+
+function _scorecreep_get_tiebreaker(&$team_score) {
+  if (array_key_exists('tiebreakwinner', $team_score) && $team_score['tiebreakwinner'] == 0) {
+    return 1;
+  }
+  return 0;
 }
 
 /**
@@ -111,7 +159,11 @@ function _scorecreep_get_bout_scores($bout_id) {
   $query = db_select('field_data_field_score', 'fs');
   $query->leftJoin('field_data_field_performance_team', 'pt', 'pt.entity_id = fs.entity_id');
   $query->leftJoin('field_data_field_bout', 'fb', 'fb.entity_id = fs.entity_id');
+  $query->leftJoin('field_data_field_tiebreakwinner', 'ftb', 'ftb.entity_id = fs.entity_id');
+  $query->leftJoin('field_data_field_rotation', 'ffr', 'ffr.entity_id = fs.entity_id');
   $query->addField('pt', 'field_performance_team_nid');
+  $query->addField('ftb', 'field_tiebreakwinner_value');
+  $query->addField('ffr', 'field_rotation_value');
   $query->addField('fs', 'field_score_value');
   $query->condition("fb.field_bout_tid", $bout_id);  
   $scores = $query->execute()->fetchAll(PDO::FETCH_ASSOC);
@@ -208,21 +260,40 @@ function _scorecreep_get_relative_strength(&$teams) {
       $ranks += $teams[$opponents[$i]]->scorecreep_total_rank;  
     }
     if (count($opponents) > 0) { 
-      $team->scorecreep_relative_strength = $ranks/count($opponents);
+      $team->scorecreep_relative_strength = number_format($ranks/count($opponents), 2);
     }
   }
 }
 
 function sort_total_ranks($ranks) {
+  $rank_list = array();
   foreach ($ranks as $key => $row) {
     $rank[$key]  = $row['total_rank'];
+    $strength[$key] = $row['relative_strength'];
     $score[$key] = $row['total_score'];
   }
 
   // Sort the data with rank ascending, score descending
   // Add $ranks as the last parameter, to sort by the common key
-  array_multisort($rank, SORT_ASC, $score, SORT_DESC, $ranks);
-  return $ranks;
+  array_multisort($rank, SORT_ASC, $strength, SORT_ASC, $score, SORT_DESC, $ranks);
+  // we are sorted add the ranking numbers as set a new array in 
+  // the order we want to display
+  $count = 1; 
+  foreach ($ranks as  $rank) {
+    $rank_list[] = array(
+      'place' => $count++,
+      'title' => $rank['title'],
+      'rank0' => $rank['rank0'],
+      'score0' => $rank['score0'],
+      'rank1' => $rank['rank1'],
+      'score1' => $rank['score1'],
+      'total_rank' => $rank['total_rank'],
+      'relative_strength' => $rank['relative_strength'],
+      'total_score' => $rank['total_score']
+    );
+  }
+
+  return $rank_list;
 }
 
 function _scorecreep_get_ranks_for_all_teams($tourney_id) {
@@ -264,7 +335,11 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
     _scorecreep_get_relative_strength($teams);
 
     for ($i = 0; $i < count($ranks); $i++) {
-      //$ranks[$i]['relative_strength'] = 
+      foreach ($teams as $team) {
+        if ($team->title == $ranks[$i]['title']) {
+          $ranks[$i]['relative_strength'] = $team->scorecreep_relative_strength;
+        }
+      }
     }
     $ranks = sort_total_ranks($ranks);
   }
