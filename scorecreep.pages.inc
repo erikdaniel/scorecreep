@@ -18,8 +18,19 @@ function bout_page_performances ($node) {
   $output = '';
   if (!empty($performance_ranks)) {
     // Make a table for them.
+    $perf_arr = array();
+    for ($i = 0; $i < count($performance_ranks); $i++) {
+        $perf_arr[] = array(
+          'rank' => $performance_ranks[$i]['rank'],
+          'team_name' => $performance_ranks[$i]['team_name'],
+          'performer' => $performance_ranks[$i]['performer'],
+          'group' => $performance_ranks[$i]['group'],
+          'rotation' => $performance_ranks[$i]['group'],
+          'score' => $performance_ranks[$i]['score'],
+        );
+    }
     $header = array( t('Rank'),t('Team'), t('Performer(s)'), t('Group Piece'),t('Rotation'), t('Score'));
-    $output .= theme('table', array('header' => $header, 'rows' => $performance_ranks));
+    $output .= theme('table', array('header' => $header, 'rows' => $perf_arr));
   }
   else {
     $output = t('No scores in this bout.');

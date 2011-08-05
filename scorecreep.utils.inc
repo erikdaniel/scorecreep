@@ -246,6 +246,7 @@ function _scorecreep_get_performances_by_rank($bout_id) {
       'group' => ($perf->field_group_piece['und'][0]['value'] == 1) ? t("Yes") : '',
       'rotation' => $perf->field_rotation['und'][0]['value'],
       'score' => $perf->field_score['und'][0]['value'],
+      'bout_term' => $perf->field_bout['und'][0]['tid'],
     );
   }
 
@@ -482,7 +483,7 @@ function _scorecreep_get_ranks_for_all_group_pieces($term) {
       $group_perfs[] = array(
         'rank' => $all_perfs[$i]['rank'],
         'team_name' => $all_perfs[$i]['team_name'],
-        'bout' => 1,
+        'bout' => $nps_bout_terms[$all_perfs[$i]['bout_term']]->name,
         'rotation' => $all_perfs[$i]['rotation'],
         'score' => $all_perfs[$i]['score'],
       );
