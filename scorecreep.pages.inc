@@ -18,7 +18,7 @@ function bout_page_performances ($node) {
   $output = '';
   if (!empty($performance_ranks)) {
     // Make a table for them.
-    $header = array( t('Rank'),t('Team'), t('Performer(s)'), t('Group Piece'),  t('Score'));
+    $header = array( t('Rank'),t('Team'), t('Performer(s)'), t('Group Piece'),t('Rotation'), t('Score'));
     $output .= theme('table', array('header' => $header, 'rows' => $performance_ranks));
   }
   else {
@@ -55,7 +55,7 @@ function tournament_scores_page($term) {
   $nps_bout_terms = taxonomy_get_children($tournament->tid);
  
   drupal_set_title($tournament->description . ' : Prelim Scores');
-  $totals = _scorecreep_get_ranks_for_all_teams($tournament->tid); // TODO fix this 
+  $totals = _scorecreep_get_ranks_for_all_teams($tournament->tid);  
   $output = '';
   if (!empty($totals)) {
     foreach ($totals as $r) {
@@ -76,13 +76,13 @@ function tournament_group_scores_page($term) {
   $nps_bout_terms = taxonomy_get_children($tournament->tid);
  
   drupal_set_title($tournament->description . ' : Group Piece Scores');
-  $totals = _scorecreep_get_ranks_for_all_teams($tournament->tid); // TODO fix this 
+  $totals = _scorecreep_get_ranks_for_all_group_pieces($tournament->tid); 
   $output = '';
   if (!empty($totals)) {
     foreach ($totals as $r) {
       $rows[] = array_map('check_plain', $r);
     }
-    $header = array(t('Place'), t('Team'), t('Bout 1 Rank'), t('Bout 1 Score'), t('Bout 2 Rank'),  t('Bout 2 Score'), t('Total Rank'), t('Strength'), t(' Total Score'));
+    $header = array(t('Rank in Bout'), t('Team'), t('Bout'), t('Rotation'), t('Score'));
     $output .= theme('table', array('header' => $header, 'rows' => $rows));
   }
   else {

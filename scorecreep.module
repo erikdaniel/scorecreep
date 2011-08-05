@@ -37,6 +37,13 @@ function scorecreep_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'file' => 'scorecreep.pages.inc',
   );
+  $items['scorecreep/%/grouppieces'] = array(
+    'page callback' => 'tournament_group_scores_page',
+    'access arguments' => array('access content'),
+    'page arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'scorecreep.pages.inc',
+  );
   $items['scorecreep/bout/%node'] = array(
     'title callback' => 'bout_page_title',
     'title arguments' => array(2),
@@ -305,6 +312,12 @@ function bout_page_view($node) {
   drupal_add_html_head_link(array('rel' => 'canonical', 'href' => url($uri['path'], $uri['options'])), TRUE);
   // Set the non-aliased path as a default shortlink.
   drupal_add_html_head_link(array('rel' => 'shortlink', 'href' => url($uri['path'], array_merge($uri['options'], array('alias' => TRUE)))), TRUE);
+
+  $node->content['scores'] = array(
+    '#markup' => views_embed_view('performances_in_bout'),
+    '#weight' => 10,
+  );
+  dvm($node);
   return node_show($node);
 }
 
@@ -438,5 +451,17 @@ function scorecreep_disable() {
     }
   }
 }
+/**
+ TODO this needs some work
+ *?
+function scorecreep_node_view_alter(&$build) {
+  if ($build['#node']->type == 'scorecreep_bout') {
+    dvm('foo');
+    $build['scorecreep_scores'] = array(
+      '#markup' => scorecreep_block_view('bout_scores'),
+      '#weight' => 10,
+    );
+  }
 
-
+}
+*/

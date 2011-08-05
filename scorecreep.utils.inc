@@ -99,8 +99,6 @@ function _scorecreep_parse_bout_scores($scores) {
 
   usort($bout_ranks, "array_sort_by_rank");
 
-  $scores = _scorecreep_get_performance_ranks($scores);
-
   return $bout_ranks;
 }
 
@@ -246,6 +244,7 @@ function _scorecreep_get_performances_by_rank($bout_id) {
       'team_name' => $teams[$team_id]->title,
       'performer' => _scorecreep_get_performers_in_performance($perf->field_performance_performer, $poets),
       'group' => ($perf->field_group_piece['und'][0]['value'] == 1) ? t("Yes") : '',
+      'rotation' => $perf->field_rotation['und'][0]['value'],
       'score' => $perf->field_score['und'][0]['value'],
     );
   }
@@ -467,4 +466,31 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
 
   // return array
   return $ranks;
+}
+
+
+function _scorecreep_get_ranks_for_all_group_pieces($term) {
+  $nps_bout_terms = taxonomy_get_children($term);
+  $all_perfs = array();
+  foreach ($nps_bout_terms as $bout_term) {
+     $all_perfs = array_merge( _scorecreep_get_performances_by_rank($bout_term->tid), $all_perfs); 
+  }
+  usort($all_perfs, "array_sort_by_rank");
+  $group_perfs = array();
+  for ($i = 0; $i < count($all_perfs); $i++) {
+    if ($all_perfs[$i]['group'] == 'Yes') {
+      $group_perfs[] = array(
+        'rank' => $all_perfs[$i]['rank'],
+        'team_name' => $all_perfs[$i]['team_name'],
+        'bout' => 1,
+        'rotation' => $all_perfs[$i]['rotation'],
+        'score' => $all_perfs[$i]['score'],
+      );
+    }
+
+  }
+
+  return $group_perfs;
+ 
+
 }
