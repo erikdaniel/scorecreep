@@ -27,6 +27,25 @@ function bout_id_or_alias_load($str) {
   return $bid;
 }
 
+/**
+ * Callback to return the bout term id from a given string.
+ */
+function bout_term_id_load($str) {
+  $term = false; 
+  $bout_term_id = false;
+  $arr = explode('-', $str);
+  $tournament = array_shift(array_values(taxonomy_get_term_by_name($arr[0])));
+  $nps_bout_terms = taxonomy_get_children($tournament->tid);
+  if (is_numeric($arr[1])) {
+    foreach ($nps_bout_terms as $term) {
+      $b = "Bout " . $arr[1];
+      if ($term->name == $b) {
+        $bout_term_id = $term->tid;
+      }
+    }
+  }
+  return $bout_term_id;
+}
 
 
 /**

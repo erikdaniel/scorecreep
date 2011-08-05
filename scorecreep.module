@@ -50,9 +50,9 @@ function scorecreep_menu() {
     'title callback' => 'tournament_scores_page_title',
     'title arguments' => array(1),
     'page callback' => 'tournament_scores_page',
+    'access arguments' => array('access content'),
     'page arguments' => array(1),
-    'access callback' => 'node_access',
-    'access arguments' => array('view', 2),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
   );
   $items['scorecreep/bout/%node'] = array(
     'title callback' => 'bout_page_title',
@@ -95,7 +95,7 @@ function scorecreep_menu() {
 
 
 
-  $items['scorecreep/bout/%bout_id_or_alias/add/performance'] = array(
+  $items['scorecreep/bout/%bout_term_id/add/performance'] = array(
     'title' => 'Add Performance',
     'title callback' => 'check_plain',
     'page callback' => 'performance_add',
@@ -116,11 +116,11 @@ function scorecreep_menu() {
 function performance_add($bout) {
   global $user;
   $type = 'scorecreep_performance';
-
+  $bout_term = taxonomy_term_load($bout);
   $types = node_type_get_types();
   $node = (object) array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => LANGUAGE_NONE);
-  drupal_set_title(t('Add @name to Bout @bout', array('@name' => $types[$type]->name, '@bout' => $bout)), PASS_THROUGH);
-  $output = drupal_get_form($type . '_node_form', $node, (object)array('bout_id' => $bout));
+  drupal_set_title(t('Add @name to @bout', array('@name' => $types[$type]->name, '@bout' => $bout_term->name)), PASS_THROUGH);
+  $output = drupal_get_form($type . '_node_form', $node, (object)array('bout_id' => $bout_term->tid));
   return $output;
 }
 
@@ -132,7 +132,7 @@ function performance_add($bout) {
 function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_state, $form_id) {
   $bout_id = isset($form_state['build_info']['args'][1]->bout_id) ? $form_state['build_info']['args'][1]->bout_id:null;
   // only edit the form if we are in a bout/%/performance/add
-  if ($bout_id) {
+  if (isset($bout_id)) {
     $form_state['scorecreep']['bout'] = $bout_id;
 
     // TODO remove - just messing about
@@ -142,15 +142,14 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
       '#description' => t('Waddup'),
     );
 
-     // Converting the bout from textfield to 'value' so its not exposed in this form
-    $form['field_perf_bout']['und'][0]['value']['#type'] = 'value';
-    $form['field_perf_bout']['und'][0]['value']['#value'] =  $bout_id;
+    // Converting the bout from textfield to 'value' so its not exposed in this form
+    $form['field_bout']['und']['#type'] = 'value';
+    $form['field_bout']['und']['#value'] =  $bout_id;
+    //$form['field_bout']['und'][0]['tid'] =  $bout_id;
 
     // Add our custom submit handler.
     $form['actions']['submit']['#submit'][] = 'scorecreep_performance_set_redirect'; 
   }
-
-  //dvm($form_state);
 }
 
 
@@ -160,6 +159,7 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
  */
 function scorecreep_performance_set_redirect( $form, &$form_state) {
   $bout_id = $form_state['scorecreep']['bout'];
+  // TODO redo this thit to get the correct bout id
   $alias = drupal_lookup_path('alias', 'node/' . $bout_id);
   $form_state['redirect'] = $alias;
 }
@@ -232,7 +232,7 @@ function scorecreep_block_view($delta = '') {
   case 'team_scores':
     $team = array();
     $subject = t('Team Scores');
-    $output = t('No ranks or scores for this team yet.');
+    $output = '';
     if ($path[0] == 'node' && is_numeric($path[1])) {
       $team = node_load($path[1]);
       $ranks = _scorecreep_get_ranks_for_team($team);
@@ -242,6 +242,9 @@ function scorecreep_block_view($delta = '') {
         }
         $header = array(t('Bout'), t('Rank'), t('Score'));
         $output .= theme('table', array('header' => $header, 'rows' => $rows));
+      }
+      else {
+        $output = t('No ranks or scores for this team yet.');
       }
     }
     break;
@@ -253,7 +256,6 @@ function scorecreep_block_view($delta = '') {
   );
   return $block;
 }
-
 
 /** 
  * Implements hook_menu_alter().
