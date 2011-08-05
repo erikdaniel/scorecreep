@@ -99,6 +99,8 @@ function _scorecreep_parse_bout_scores($scores) {
 
   usort($bout_ranks, "array_sort_by_rank");
 
+  $scores = _scorecreep_get_performance_ranks($scores);
+
   return $bout_ranks;
 }
 
@@ -125,11 +127,34 @@ function _scorecreep_get_bout_rank($scores) {
   return $scores;
 }
 
+function _scorecreep_get_performance_ranks($scores) {
+  $rank = 0;
+  $prev_val = -1;
+  for($i = 0; $i < count($scores); $i++) {
+    if ($i == 0 || $prev_val != $scores[$i]['score']) {
+      $rank = $i + 1;
+    }
+    $scores[$i]['rank'] = $rank;
+
+    $prev_val = $scores[$i]['score'];
+  }
+  return $scores;
+}
+
+
 function array_sort_by_rank($a, $b) {
   if ($a['rank'] == $b['rank']) {
     return 0;
   }
   return ($a['rank'] < $b['rank']) ? -1 : 1;
+}
+
+
+function array_sort_by_score($a, $b) {
+  if ($a['score'] == $b['score']) {
+    return 0;
+  }
+  return ($a['score'] > $b['score']) ? -1 : 1;
 }
 
 function _scorecreep_get_tiebreaker(&$team_score) {
@@ -170,6 +195,79 @@ function _scorecreep_get_team_names(&$teams) {
     ->condition('nid', $teams)
     ->execute();
   return $result->fetchAllAssoc('nid');
+}
+
+function _scorecreep_get_performances_by_rank($bout_id) {
+ $query = new EntityFieldQuery();
+
+  $query
+    ->entityCondition('entity_type', 'node', '=')
+    ->propertyCondition('type', 'scorecreep_performance', '=')
+    ->fieldCondition('field_rotation', 'value', NUM_ROTATIONS, '<=', 0);
+  if ($bout_id) {
+    $query->fieldCondition('field_bout', 'tid', $bout_id, '=', 0);
+  }
+
+  $result = $query->execute();
+
+  $team_ids = array();
+  $poet_ids = array(); 
+  $scores = array();
+
+  $pids = array();
+  foreach($result['node'] as $record) {
+    $pids[] = $record->nid;
+  }
+  $performances = entity_load('node', $pids);   
+  
+  foreach ($performances as $perf) {
+    //dvm($perf);
+    $team_id = $perf->field_performance_team['und'][0]['nid'];
+    if (!in_array($team_id, $team_ids)) { 
+      $team_ids[] = $team_id; 
+    }
+
+    if (!empty($perf->field_performance_performer)) {
+      $arr = $perf->field_performance_performer['und'];
+      foreach ($arr as $p) {
+        if (!in_array($p['uid'], $poet_ids)) {
+          $poet_ids[] = $p['uid'];
+        }
+      }
+    }
+  }
+  $poets = user_load_multiple($poet_ids);
+  $teams = node_load_multiple($team_ids);
+
+  foreach ($performances as $perf) {
+    $team_id = $perf->field_performance_team['und'][0]['nid'];
+    $scores[] = array(
+      'rank' => 0,
+      'team_name' => $teams[$team_id]->title,
+      'performer' => _scorecreep_get_performers_in_performance($perf->field_performance_performer, $poets),
+      'group' => ($perf->field_group_piece['und'][0]['value'] == 1) ? t("Yes") : '',
+      'score' => $perf->field_score['und'][0]['value'],
+    );
+  }
+
+  // sort by score high to low
+  usort($scores, "array_sort_by_score");
+  // set ranks
+  $scores = _scorecreep_get_performance_ranks($scores);
+
+  return $scores;
+}
+
+function _scorecreep_get_performers_in_performance($perf, $poets) {
+  $poetnames = array();
+  if (empty($poets) || empty($perf)) {
+    return '';// this is an error
+  }
+  $a = $perf['und'];
+  for ($i = 0; $i < count($a); $i++) {
+    $poetnames[] = $poets[$a[$i]['uid']]->field_stage_name['und'][0]['safe_value'];
+  }
+  return implode(', ', $poetnames);
 }
 
 function _scorecreep_get_bout_scores($bout_id) {
@@ -294,7 +392,9 @@ function sort_total_ranks($ranks) {
 
   // Sort the data with rank ascending, score descending
   // Add $ranks as the last parameter, to sort by the common key
-  array_multisort($rank, SORT_ASC, $strength, SORT_ASC, $score, SORT_DESC, $ranks);
+  if(!empty($ranks)) {
+    array_multisort($rank, SORT_ASC, $strength, SORT_ASC, $score, SORT_DESC, $ranks);
+  }
   // we are sorted add the ranking numbers as set a new array in 
   // the order we want to display
   $count = 1; 

@@ -2,35 +2,10 @@
 
 /**
  * @file
- * This is an example outlining how a module can be used to define a new
- * node type.  In Drupal 7 we move most of what was once needed in this file
- * to the scorecreep.install file so that it can be managed efficiently.
- *
- * Our example node type will allow users to specify multiple "colors",
- * a "quantity" and an "image" for their nodes; some kind of rudimentary
- * inventory-tracking system, perhaps?
- *
- * In previous versions of Drupal, "teaser" and "page" were node view modes.  In
- * Drupal 7 we can define custom view modes to let the node know how it should
- * return it's data.  This module declares a custom view mode called
- * "example_node_list".
- *
- * We no longer need an extra database table to store this content type's
- * information.
- *
- * Most node types that provide fields do not require any custom code for
- * the fields, as the fields system provides storage and access.
- *
- * See @link http://drupal.org/node/707832 Field API Tutorial @endlink
- *
- * See @link http://drupal.org/node/443536 Field API Handbook Page @endlink
- *
- * See @link field Field API documentation @endlink
- *
- * See @link field_example.install field_example.install @endlink
- *
- * Remember that most node types do not require any custom code, as one
- * simply creates them using the fields UI.
+ * Custom content for PSi Scorecreep module. 
+ * This module is designed to keep score for the National Poetyr Slam.
+ * @see http://poetryslam.com
+ * @see http://nps2011.com
  */
 module_load_include('inc', 'node', 'node.pages');   
 module_load_include('inc', 'scorecreep', 'scorecreep.utils');   
@@ -46,6 +21,13 @@ function scorecreep_menu() {
     'access arguments' => array('access content'),
     'title' => 'PSi Scorecreep',
   );
+  $items['scorecreep/%'] = array(
+    'page callback' => 'scorecreep_tournament_page',
+    'access arguments' => array('access content'),
+    'title' => 'PSi Scorecreep',
+    'page arguments' => array(1),
+    'file' => 'scorecreep.pages.inc',
+  );
   $items['scorecreep/%/scores'] = array(
     'title callback' => 'tournament_scores_page_title',
     'title arguments' => array(1),
@@ -53,6 +35,7 @@ function scorecreep_menu() {
     'access arguments' => array('access content'),
     'page arguments' => array(1),
     'type' => MENU_DEFAULT_LOCAL_TASK,
+    'file' => 'scorecreep.pages.inc',
   );
   $items['scorecreep/bout/%node'] = array(
     'title callback' => 'bout_page_title',
@@ -69,7 +52,17 @@ function scorecreep_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
+$items['node/%node/performances'] = array(
+      'title' => 'Performances',
+      'page callback' => 'bout_page_performances',
+      'page arguments' => array(1),
+      'type' => MENU_LOCAL_TASK,
+      'file' => 'scorecreep.pages.inc',
+      'access callback' => TRUE,
+    );
 
+
+/*
    $items['scorecreep/bout/%node/edit'] = array(
       'title' => 'Edit',
       'page callback' => 'node_page_edit',
@@ -81,7 +74,7 @@ function scorecreep_menu() {
       'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
       //'file' => 'node.pages.inc',
     );
-    $items['scorecreep/bout/%node/delete'] = array(
+      $items['scorecreep/bout/%node/delete'] = array(
       'title' => 'Delete',
       'page callback' => 'drupal_get_form',
       'page arguments' => array('node_delete_confirm', 2),
@@ -92,6 +85,7 @@ function scorecreep_menu() {
       'context' => MENU_CONTEXT_INLINE,
       //'file' => 'node.pages.inc',
     );
+      */
 
 
 
@@ -172,7 +166,7 @@ function bout_page_title($node) {
 }
 
 function tournament_scores_page_title($term) {
-  return "Tournament $term";// this isn't safe
+  return t("Tournament @term", array("@term" => $term));// TODO see if this is safe
 }
 
 /**
@@ -296,24 +290,6 @@ function scorecreep_page() {
   // TODO List tournaments
   return t('Welcome to the PSi Scorecreep.');
 }
-
-
-function tournament_scores_page($term) {
-  $totals = _scorecreep_get_ranks_for_all_teams(1);
-  $output = t('Welcome to the PSi Scorecreep. @term', array('@term' => $term));
-  if (!empty($totals)) {
-    foreach ($totals as $r) {
-      $rows[] = array_map('check_plain', $r);
-    }
-    $header = array(t('Place'), t('Team'), t('Bout 1 Rank'), t('Bout 1 Score'), t('Bout 2 Rank'),  t('Bout 2 Score'), t('Total Rank'), t('Strength'), t(' Total Score'));
-    $output .= theme('table', array('header' => $header, 'rows' => $rows));
-  }
-  else {
-    $output .= t('There are no bouts recorded for this tournament yet.');
-  }
-  return $output;
-}
-
 /**
  * Custom callback for bout pages.
  * @return

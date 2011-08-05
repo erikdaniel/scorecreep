@@ -6,4 +6,6 @@ dependencies[] = image
 files[] = scorecreep.test
 files[] = scorecreep.install
 files[] = scorecreep.module
+files[] = scorecreep.pages.inc
+files[] = scorecreep.utils.inc
 files[] = scorecreep_menu.test
