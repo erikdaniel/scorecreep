@@ -213,8 +213,10 @@ function _scorecreep_get_performances_by_rank($bout_id) {
   $scores = array();
 
   $pids = array();
-  foreach($result['node'] as $record) {
-    $pids[] = $record->nid;
+  if ( array_key_exists('node', $result) ) {
+    foreach($result['node'] as $record) {
+      $pids[] = $record->nid;
+    }
   }
   $performances = entity_load('node', $pids);   
   

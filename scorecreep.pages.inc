@@ -44,20 +44,24 @@ function scorecreep_tournament_page($term) {
   $nps_bout_terms = taxonomy_get_children($tournament->tid);
   $bouts = array();
   drupal_set_title($tournament->description);
+  /*
   foreach ($nps_bout_terms as $bout) {
     $name = check_plain($bout->name);
     $id = str_replace("Bout ", "", $name);
     $path = 'scorecreep/bout/' . check_plain($term) . '-' . $id;
     $bouts[] = l($name, $path);   
   }
+  */
 
   $output = '';//t($tournament->description);
   $output = l('Prelim Scores', 'scorecreep/' . check_plain($term) . '/scores');
+  /*
   if (!empty($bouts)) {
     $output .= theme_item_list(array('items' => $bouts, 'title' => 'Bouts', 'type' => 'ul', 'attributes' => array('id' => 'bout_list')));
   } else {
     $output .= t('No bouts set for this tournament.');
   }
+  */
   return $output;
 }
 
