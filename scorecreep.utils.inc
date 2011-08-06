@@ -223,8 +223,45 @@ function _scorecreep_get_bout_node_id_from_tid($tid) {
     ->fieldCondition('field_bout', 'tid', $tid, '=');
   $arr = $query->execute();
   return  array_shift(array_values($arr['node']));
-  
+}
 
+function _scorecreep_get_performers_from_team_id(&$team) {
+  /*
+  $query = new EntityFieldQuery();
+  $query
+    ->entityCondition('entity_type', 'user', '=')
+    ->fieldCondition('field_user_teams', 'nid', $team, 'IN');
+  $arr = $query->execute();
+  */
+  $poets = array();
+  if (isset($arr['user']) ) {
+    $poets = $arr['user'];
+  }
+   $poets = array();
+  $query = db_select('field_data_field_user_teams', 'tm');
+  $query->leftJoin('node', 'n', 'tm.field_user_teams_nid = n.nid');
+  $query->addField('tm', 'entity_id');
+  $query->addField('tm', 'field_user_teams_nid');
+  $query->addField('n', 'title');
+  $query->condition("tm.field_user_teams_nid", $team, 'IN');  
+  $poets = $query->execute()->fetchAllAssoc('entity_id');//(PDO::FETCH_ASSOC);
+
+
+  return  $poets;//array_shift(array_values($arr['user']));
+}
+
+function _scorecreep_get_performances_in_bout($bout_id) {
+ $query = new EntityFieldQuery();
+  $query
+    ->entityCondition('entity_type', 'node', '=')
+    ->propertyCondition('type', 'scorecreep_performance', '=')
+    ->fieldCondition('field_bout', 'tid', $bout_id, '=', 0);
+  $val = $query->execute();
+  $perfs = array();
+  if (isset($val['node']) ){
+    $perfs = $val['node'];
+  }
+  return $perfs;
 }
 
 function _scorecreep_get_performances_by_rank($bout_id) {
