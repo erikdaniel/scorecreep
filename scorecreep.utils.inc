@@ -401,17 +401,19 @@ function sort_total_ranks($ranks) {
   // the order we want to display
   $count = 1; 
   foreach ($ranks as  $rank) {
-    $rank_list[] = array(
-      'place' => $count++,
-      'title' => $rank['title'],
-      'rank0' => $rank['rank0'],
-      'score0' => $rank['score0'],
-      'rank1' => $rank['rank1'],
-      'score1' => $rank['score1'],
-      'total_rank' => $rank['total_rank'],
-      'relative_strength' => $rank['relative_strength'],
-      'total_score' => $rank['total_score']
-    );
+    //if (array_key_exists('rank0', $rank)) {
+      $rank_list[] = array(
+        'place' => $count++,
+        'title' => $rank['title'],
+        'rank0' => isset($rank['rank0']) ? $rank['rank0'] : '',
+        'score0' => isset($rank['score0']) ? $rank['score0']: '',
+        'rank1' => isset($rank['rank1']) ? $rank['rank1'] : '',
+        'score1' => isset($rank['score1']) ? $rank['score1'] : '',
+        'total_rank' => $rank['total_rank'],
+        'relative_strength' => (isset($rank['rank0']) && isset($rank['rank1']))? $rank['relative_strength'] : '',
+        'total_score' => $rank['total_score'],
+      );
+    //}
   }
 
   return $rank_list;

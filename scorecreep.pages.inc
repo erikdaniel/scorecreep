@@ -3,7 +3,9 @@
 function bout_page_performances ($node) {
   //$bout_tid = bout_term_id_load($node);
   //dvm($node);
-
+  if ($node->type != 'scorecreep_bout') {
+    return ''; //TODO FIX THIS
+  }
 
   drupal_set_title($node->title . " : Performances by Rank");
   $uri = entity_uri('node', $node);

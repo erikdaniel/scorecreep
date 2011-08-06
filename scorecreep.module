@@ -147,7 +147,6 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
     $form['field_bout']['und']['#type'] = 'value';
     $form['field_bout']['und']['#value'] =  $bout_id;
     //$form['field_bout']['und'][0]['tid'] =  $bout_id;
-
     // Add our custom submit handler.
     $form['actions']['submit']['#submit'][] = 'scorecreep_performance_set_redirect'; 
   }
@@ -159,6 +158,7 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
  * back to the bout.
  */
 function scorecreep_performance_set_redirect( $form, &$form_state) {
+  dvm($form);
   $bout_id = $form_state['scorecreep']['bout'];
   // TODO redo this thit to get the correct bout id
   $alias = drupal_lookup_path('alias', 'node/' . $bout_id);
