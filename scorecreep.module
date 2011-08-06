@@ -177,16 +177,16 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
     $form['field_rotation']['und'][0]['value']['#default_value'] =  $rotation;
 
     // handle performers
-    //dvm($form);
     $all_performers = $form['field_performance_performer']['und']['#options'];
-    dvm($all_performers);
     $bout_performers =  _scorecreep_get_performers_from_team_id($team_ids);
-    dvm($bout_performers);
     $new_performers = array('_none' => '- None -');
+
     foreach($bout_performers as $key => $val) {
       $new_performers[$key] = '(' . $val->title . ')' . $all_performers[$key];
     }
     $form['field_performance_performer']['und']['#options'] = $new_performers;
+
+    $form['title']['#default_value'] = t('Untitled');
 
     // Converting the bout from textfield to 'value' so its not exposed in this form
     $form['field_bout']['und']['#type'] = 'value';
