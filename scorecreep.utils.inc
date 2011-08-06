@@ -195,6 +195,38 @@ function _scorecreep_get_team_names(&$teams) {
   return $result->fetchAllAssoc('nid');
 }
 
+function _scorecreep_get_teams_in_bout_by_tid($tid) {
+  /*
+  $teams = '';
+  $query = db_select('field_data_field_team_bouts', 'fs');
+  $query->addField('fs', 'entity_id');
+  $query->condition("fs.field_team_bouts_tid", $tid);  
+  $teams = $query->execute()->fetchAll(PDO::FETCH_ASSOC);
+  return $teams;
+  */
+ $query = new EntityFieldQuery();
+
+  $query
+    ->entityCondition('entity_type', 'node', '=')
+    ->propertyCondition('type', 'scorecreep_team', '=')
+    ->fieldCondition('field_team_bouts', 'tid', $tid, '=');
+  $arr = $query->execute();
+  return $arr['node'];
+
+}
+
+function _scorecreep_get_bout_node_id_from_tid($tid) {
+  $query = new EntityFieldQuery();
+  $query
+    ->entityCondition('entity_type', 'node', '=')
+    ->propertyCondition('type', 'scorecreep_bout', '=')
+    ->fieldCondition('field_bout', 'tid', $tid, '=');
+  $arr = $query->execute();
+  return  array_shift(array_values($arr['node']));
+  
+
+}
+
 function _scorecreep_get_performances_by_rank($bout_id) {
  $query = new EntityFieldQuery();
 
