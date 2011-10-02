@@ -399,10 +399,17 @@ function _scorecreep_get_ranks_for_team(&$team) {
           'bout' => $key,
           'rank' => $rank[$j]['rank'],
           'score' => $rank[$j]['score'],
+	  'bid' => intval(str_replace('Bout ', '', $key)),
         );
       }
     }
   }
+  $bid = array();
+ foreach ($team_ranks as $key => $row) {
+    $bid[$key]  = $row['bid'];
+ }
+  
+ array_multisort($bid, SORT_ASC,  $team_ranks);
   return $team_ranks;
 }
 
@@ -455,16 +462,24 @@ function _scorecreep_get_relative_strength(&$teams) {
 
 function sort_total_ranks($ranks) {
   $rank_list = array();
+  $stren = array();
   foreach ($ranks as $key => $row) {
     $rank[$key]  = $row['total_rank'];
     $strength[$key] = $row['relative_strength'];
     $score[$key] = $row['total_score'];
+    $strength_flag = (isset($row['relative_strength']) && $row['relative_strength'] > 0);
+    $stren[] = $row['relative_strength'];
   }
 
   // Sort the data with rank ascending, score descending
   // Add $ranks as the last parameter, to sort by the common key
   if(!empty($ranks)) {
-    array_multisort($rank, SORT_ASC, $strength, SORT_ASC, $score, SORT_DESC, $ranks);
+    if(count($stren) > 74) {//TODO fix this
+      array_multisort($rank, SORT_ASC, $strength, SORT_ASC, $score, SORT_DESC, $ranks);
+    }
+    else {
+      array_multisort($rank, SORT_ASC, $score, SORT_DESC, $ranks);
+    }
   }
   // we are sorted add the ranking numbers as set a new array in 
   // the order we want to display
@@ -484,7 +499,6 @@ function sort_total_ranks($ranks) {
       );
     //}
   }
-
   return $rank_list;
 }
 
@@ -501,6 +515,7 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
   if (isset($nodes)) {
     foreach ($nodes as $node) {
       if ($node->type == 'scorecreep_team') {
+	$team_rank = array();
         $team = $node;
         $team->scorecreep_ranks = _scorecreep_get_ranks_for_team($team);
         $team->scorecreep_total_rank = null;
@@ -520,7 +535,9 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
         $team_rank['total_rank'] = $team->scorecreep_total_rank;
         $team_rank['total_score'] = $team->scorecreep_total_score;
         $teams[$team->nid] = $team;
+        if (isset($team_rank['total_rank'])) {
         $ranks[] = $team_rank;
+	}
       }
     }
     // set ranks
@@ -529,7 +546,7 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
     for ($i = 0; $i < count($ranks); $i++) {
       foreach ($teams as $team) {
         if ($team->title == $ranks[$i]['title']) {
-          $ranks[$i]['relative_strength'] = $team->scorecreep_relative_strength;
+          $ranks[$i]['relative_strength'] =  $team->scorecreep_relative_strength;
         }
       }
     }
@@ -563,8 +580,17 @@ function _scorecreep_get_ranks_for_all_group_pieces($term) {
     }
 
   }
-
+  _scorecreep_group_piece_final_sort($group_perfs);
   return $group_perfs;
- 
+}
 
+function _scorecreep_group_piece_final_sort(&$group_pieces) {
+	foreach ($group_pieces as $key => $row) {
+	    $rank[$key]  = $row['rank'];
+	    $score[$key] = $row['score'];
+	  }
+
+	if($group_pieces) {
+	    array_multisort($rank, SORT_ASC, $score, SORT_DESC, $group_pieces);
+	}
 }

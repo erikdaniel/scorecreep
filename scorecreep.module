@@ -37,11 +37,26 @@ function scorecreep_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'file' => 'scorecreep.pages.inc',
   );
+/*
+ $items['scorecreep/%/scores'] = array(
+    'title callback' => 'tournament_scores_page_title',
+    'title arguments' => array(1),
+    'page callback' => 'tournament_scores_error',
+    'access arguments' => array('access content'),
+    'page arguments' => array(1),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'file' => 'scorecreep.pages.inc',
+  );
+*/
+
   $items['scorecreep/%/grouppieces'] = array(
+    'title callback' => 'grouppiece_scores_page_title',
+    'title arguments' => array(1),
     'page callback' => 'tournament_group_scores_page',
     'access arguments' => array('access content'),
     'page arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
     'file' => 'scorecreep.pages.inc',
   );
   $items['scorecreep/bout/%node'] = array(
@@ -102,7 +117,7 @@ $items['node/%node/performances'] = array(
     'page callback' => 'performance_add',
     'page arguments' => array(2),
     'access callback' => 'node_access',
-    'access arguments' => array('create', 'scorecreep_performance content'),
+    'access arguments' => array('create', 'scorecreep_performance'),
     'type' => MENU_CALLBACK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'description' => '',
@@ -140,11 +155,13 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
     $teams =  _scorecreep_get_teams_in_bout_by_tid($bout_id);
     $team_ids = array();
     // TODO remove - just messing about
+	/*
     $form['description'] = array(
       '#type' => 'item',
       '#title' => t('The current bout is @bout', array('@bout' => $bout_id)),
       '#description' => t('Waddup'),
     );
+*/
 
     $options = $form['field_performance_team']['und']['#options'];
     $newarr = array('_none' => '- Select a value -');
@@ -217,7 +234,11 @@ function bout_page_title($node) {
 }
 
 function tournament_scores_page_title($term) {
-  return t("Tournament @term", array("@term" => $term));// TODO see if this is safe
+  return t("@term Prelim Scores", array("@term" => strtoupper($term)));// TODO see if this is safe
+}
+
+function grouppiece_scores_page_title($term) {
+  return t("@term Group Piece Scores", array("@term" => strtoupper($term)));// TODO see if this is safe
 }
 
 /**

@@ -4,7 +4,7 @@ function bout_page_performances ($node) {
   //$bout_tid = bout_term_id_load($node);
   //dvm($node);
   if ($node->type != 'scorecreep_bout') {
-    return ''; //TODO FIX THIS
+    return FALSE; //TODO FIX THIS
   }
 
   drupal_set_title($node->title . " : Performances by Rank");
@@ -27,7 +27,7 @@ function bout_page_performances ($node) {
           'team_name' => $performance_ranks[$i]['team_name'],
           'performer' => $performance_ranks[$i]['performer'],
           'group' => $performance_ranks[$i]['group'],
-          'rotation' => $performance_ranks[$i]['group'],
+          'rotation' => $performance_ranks[$i]['rotation'],
           'score' => $performance_ranks[$i]['score'],
         );
     }
@@ -73,7 +73,7 @@ function tournament_scores_page($term) {
  
   drupal_set_title($tournament->description . ' : Prelim Scores');
   $totals = _scorecreep_get_ranks_for_all_teams($tournament->tid);  
-  $output = '';
+  $output = t('');
   if (!empty($totals)) {
     foreach ($totals as $r) {
       $rows[] = array_map('check_plain', $r);
@@ -87,6 +87,9 @@ function tournament_scores_page($term) {
   return $output;
 }
 
+function tournament_scores_error($term) {
+	return t("Oops! Having a little trouble! We are looking into it and will have this page fixed as soon as possible.");
+}
 
 function tournament_group_scores_page($term) {
   $tournament = array_shift(array_values(taxonomy_get_term_by_name($term)));
@@ -94,7 +97,7 @@ function tournament_group_scores_page($term) {
  
   drupal_set_title($tournament->description . ' : Group Piece Scores');
   $totals = _scorecreep_get_ranks_for_all_group_pieces($tournament->tid); 
-  $output = '';
+  $output = t('The below list includes teams in semi-finals. ');
   if (!empty($totals)) {
     foreach ($totals as $r) {
       $rows[] = array_map('check_plain', $r);
