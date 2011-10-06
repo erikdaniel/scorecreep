@@ -37,18 +37,6 @@ function scorecreep_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'file' => 'scorecreep.pages.inc',
   );
-/*
- $items['scorecreep/%/scores'] = array(
-    'title callback' => 'tournament_scores_page_title',
-    'title arguments' => array(1),
-    'page callback' => 'tournament_scores_error',
-    'access arguments' => array('access content'),
-    'page arguments' => array(1),
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'file' => 'scorecreep.pages.inc',
-  );
-*/
-
   $items['scorecreep/%/grouppieces'] = array(
     'title callback' => 'grouppiece_scores_page_title',
     'title arguments' => array(1),
@@ -74,42 +62,24 @@ function scorecreep_menu() {
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
+$items['scorecreep/bout/%node/performances'] = array(
+      'title' => 'Performances',
+      'page callback' => 'bout_page_performances',
+      'page arguments' => array(2),
+      'type' => MENU_LOCAL_TASK,
+      'file' => 'scorecreep.pages.inc',
+      'access callback' => array('performance_tab_access'),
+      'access arguments' => array(2),
+  );
 $items['node/%node/performances'] = array(
       'title' => 'Performances',
       'page callback' => 'bout_page_performances',
       'page arguments' => array(1),
       'type' => MENU_LOCAL_TASK,
       'file' => 'scorecreep.pages.inc',
-      'access callback' => TRUE,
+      'access callback' => array('performance_tab_access'),
+      'access arguments' => array(1),
     );
-
-
-/*
-   $items['scorecreep/bout/%node/edit'] = array(
-      'title' => 'Edit',
-      'page callback' => 'node_page_edit',
-      'page arguments' => array(2),
-      'access callback' => 'node_access',
-      'access arguments' => array('update', 2),
-      'weight' => 0,
-      'type' => MENU_LOCAL_TASK,
-      'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
-      //'file' => 'node.pages.inc',
-    );
-      $items['scorecreep/bout/%node/delete'] = array(
-      'title' => 'Delete',
-      'page callback' => 'drupal_get_form',
-      'page arguments' => array('node_delete_confirm', 2),
-      'access callback' => 'node_access',
-      'access arguments' => array('delete', 2),
-      'weight' => 1,
-      'type' => MENU_LOCAL_TASK,
-      'context' => MENU_CONTEXT_INLINE,
-      //'file' => 'node.pages.inc',
-    );
-      */
-
-
 
   $items['scorecreep/bout/%bout_term_id/add/performance'] = array(
     'title' => 'Add Performance',
@@ -125,6 +95,13 @@ $items['node/%node/performances'] = array(
   );
 
   return $items;
+}
+
+/**
+ * Access callback for the performances tab.
+ */
+function performance_tab_access($node) {
+  return $node->type == 'scorecreep_bout';// && user_access('view published content');
 }
 /**
  * Returns a node submission form.
@@ -371,6 +348,7 @@ function bout_page_view($node) {
     // If there is a menu link to this node, the link becomes the last part
   // of the active trail, and the link name becomes the page title.
   // Thus, we must explicitly set the page title to be the node title.
+  dvm($node);
   drupal_set_title($node->title);
   $uri = entity_uri('node', $node);
   // Set the node path as the canonical URL to prevent duplicate content.
