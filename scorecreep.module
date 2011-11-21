@@ -101,8 +101,13 @@ $items['node/%node/performances'] = array(
  * Access callback for the performances tab.
  */
 function performance_tab_access($node) {
-  return $node->type == 'scorecreep_bout';// && user_access('view published content');
+  $bout_type = NULL;
+  if (isset($node->field_bout_type[$node->language])) {
+    $bout_type = $node->field_bout_type[$node->language][0]['value'];
+  }
+  return $node->type == 'scorecreep_bout' &&(!isset($bout_type) || $bout_type == 'team');// && user_access('view published content');
 }
+
 /**
  * Returns a node submission form.
  */
@@ -116,7 +121,6 @@ function performance_add($bout) {
   $output = drupal_get_form($type . '_node_form', $node, (object)array('bout_id' => $bout_term->tid));
   return $output;
 }
-
 
 /**
  * Implements hook_FORM_TYPE_form_alter().
