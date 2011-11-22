@@ -135,14 +135,7 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
 
     $teams =  _scorecreep_get_teams_in_bout_by_tid($bout_id);
     $team_ids = array();
-    // TODO remove - just messing about
-	/*
-    $form['description'] = array(
-      '#type' => 'item',
-      '#title' => t('The current bout is @bout', array('@bout' => $bout_id)),
-      '#description' => t('Waddup'),
-    );
-*/
+ 
 
     $options = $form['field_performance_team']['und']['#options'];
     $newarr = array('_none' => '- Select a value -');
@@ -152,8 +145,6 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
     }
     $form['field_performance_team']['und']['#options'] = $newarr;
 
-    // Set rotation
-    //$num_perfs_in_bout =  count(_scorecreep_get_performances_in_bout($bout_id)); 
     $num_perfs_in_bout =  count(_scorecreep_get_performances_in_bout($bout_id)); 
     $rotation = 1;
     if ($num_perfs_in_bout < 4) {
@@ -170,7 +161,6 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
     else {
       $rotation = 5;
     }
-    //$form['field_rotation']['und']['#type'] = 'value';
     // TODO hide this field
     $form['field_rotation']['und'][0]['value']['#default_value'] =  $rotation;
 
@@ -303,14 +293,6 @@ function scorecreep_block_view($delta = '') {
   );
   return $block;
 }
-
-/** 
- * Implements hook_menu_alter().
- */
-//function scorecreep_menu_alter(&$items) {
-  
-//}
-
 /**
  * Custom callback that builds our content and returns it to the browser.
  *
@@ -319,27 +301,6 @@ function scorecreep_block_view($delta = '') {
  *
  */
 function scorecreep_page() {
-  /*
-  $build = array();
-  $sql = 'SELECT nid FROM {node} n WHERE n.type = :type AND n.status = :status';
-  $result = db_query($sql,
-    array(
-      ':type' => 'scorecreep_performance',
-      ':status' => 1,
-    )
-  );
-
-  // Loop through each of our scorecreep nodes and instruct node_view
-  // to use our custom "example_node_list" view.
-  // http://api.drupal.org/api/function/node_load/7
-  // http://api.drupal.org/api/function/node_view/7
-  foreach ($result as $row) {
-    $node = node_load($row->nid);
-    $build['node_list'][]= node_view($node, 'scorecreep_performance_list');
-  }
-
-  return $build;
-  */
   // TODO List tournaments
   return t('Welcome to the PSi Scorecreep.');
 }
@@ -349,7 +310,7 @@ function scorecreep_page() {
  *   a build array
  */
 function bout_page_view($node) {
-    // If there is a menu link to this node, the link becomes the last part
+  // If there is a menu link to this node, the link becomes the last part
   // of the active trail, and the link name becomes the page title.
   // Thus, we must explicitly set the page title to be the node title.
   dvm($node);
@@ -367,75 +328,7 @@ function bout_page_view($node) {
   dvm($node);
   return node_show($node);
 }
-
-/**
- * Implements hook_entity_info_alter().
- *
- * We need to modify the default node entity info by adding a new view mode to
- * be used in functions like node_view() or node_build_content().
- *
- */
-/*
-function scorecreep_entity_info_alter(&$entity_info) {
-  $entity_info['node']['view modes']['scorecreep_performance_list'] = array(
-    'label' => t('Example Node List'),
-    'custom settings' => TRUE,
-  );
-}
-*/
-
-
-/**
- * Implements hook_field_formatter_info().
- */
-/*
-function scorecreep_field_formatter_info() {
-  return array(
-    'scorecreep_colors' => array(
-      'label' => t('Node Example Color Handle'),
-      'field types' => array('text'),
-    ),
-  );
-}
-*/
-
-/**
- * Implements hook_field_formatter_view().
- *
- * @todo: We need to provide a formatter for the colors that a user is allowed to enter
- * during node creation.
- */
-/*
-function scorecreep_field_formatter_view($object_type, $object, $field, $instance, $langcode, $items, $display) {
-  $element = array();
-  switch ($display['type']) {
-    case 'scorecreep_colors':
-      foreach ($items as $delta => $item) {
-        $element[$delta]['#type'] = 'markup';
-        $color = $item['safe_value'];
-        $element[$delta]['#markup'] = theme('example_node_color', array('color' => $color));
-      }
-      break;
-  }
-
-  return $element;
-}
-*/
-
-/**
- * Implements hook_theme().
- *
- * This lets us tell Drupal about our theme functions and their arguments.
- */
-/*
-function scorecreep_theme($existing, $type, $theme, $path) {
-  return array(
-    'example_node_color' => array(
-      'variables' => array('color' => NULL),
-    ),
-  );
-}
-*/
+/
 
 /**
  * Implements hook_help().
@@ -449,20 +342,6 @@ function scorecreep_help($path, $arg) {
         ) . "</p>";
   }
 }
-
-/**
- * A custom theme function.
- *
- * By using this function to format our node-specific information, themes
- * can override this presentation if they wish.  This is a simplifed theme
- * function purely for illustrative purposes.
- */
-/*
-function theme_example_node_color($variables) {
-  $output = '<span style="background-color: #ccc; padding: 1em; margin-bottom: 1em; float: left; color: ' . $variables['color'] . '">' . $variables['color'] . '</span>';
-  return $output;
-}
-*/
 
 
 /**
@@ -498,17 +377,4 @@ function scorecreep_disable() {
     }
   }
 }
-/**
- TODO this needs some work
- *?
-function scorecreep_node_view_alter(&$build) {
-  if ($build['#node']->type == 'scorecreep_bout') {
-    dvm('foo');
-    $build['scorecreep_scores'] = array(
-      '#markup' => scorecreep_block_view('bout_scores'),
-      '#weight' => 10,
-    );
-  }
 
-}
-*/

@@ -196,14 +196,6 @@ function _scorecreep_get_team_names(&$teams) {
 }
 
 function _scorecreep_get_teams_in_bout_by_tid($tid) {
-  /*
-  $teams = '';
-  $query = db_select('field_data_field_team_bouts', 'fs');
-  $query->addField('fs', 'entity_id');
-  $query->condition("fs.field_team_bouts_tid", $tid);  
-  $teams = $query->execute()->fetchAll(PDO::FETCH_ASSOC);
-  return $teams;
-  */
  $query = new EntityFieldQuery();
 
   $query
@@ -226,13 +218,6 @@ function _scorecreep_get_bout_node_id_from_tid($tid) {
 }
 
 function _scorecreep_get_performers_from_team_id(&$team) {
-  /*
-  $query = new EntityFieldQuery();
-  $query
-    ->entityCondition('entity_type', 'user', '=')
-    ->fieldCondition('field_user_teams', 'nid', $team, 'IN');
-  $arr = $query->execute();
-  */
   $poets = array();
   if (isset($arr['user']) ) {
     $poets = $arr['user'];
@@ -377,19 +362,6 @@ function _scorecreep_get_ranks_for_team(&$team) {
     //print_r($x);
     $ranks[$x->name] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($terms[$i]));
   }
-/*
-  $bouts = node_load_multiple($nodes);
-  //print_r($bouts);
-
-  // get scores and ranks for each bout
-  foreach ($bouts as $bout) {
-      print_r($bout->type); 
-    if ($bout->type == 'scorecreep_bout') {
-      //$ranks[$bout->nid] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($bout->nid));
-      $ranks[$bout->nid] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($bout->field_bout['und'][0]['tid']));
-    }
-  }
-*/
   $team_ranks = array();
   //for ($i = 0; $i < count($ranks); $i++) {
   foreach ($ranks as $key => $rank) {
@@ -508,8 +480,6 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
   $nodes = node_load_multiple($nids);
   $teams = array();
   $ranks = array();
-  //$nodes = (array)taxonomy_select_nodes($tid[0]);
-  //print_r($nodes);
 
   // loop though team array and set ranks for each
   if (isset($nodes)) {
@@ -531,7 +501,6 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
           $team->scorecreep_total_rank += $team->scorecreep_ranks[$i]['rank']; 
           $team->scorecreep_total_score += $team->scorecreep_ranks[$i]['score']; 
         }
-        //print $team->title . " rank: " . $team->scorecreep_total_rank . " score: " . $team->scorecreep_total_score . "<br />";
         $team_rank['total_rank'] = $team->scorecreep_total_rank;
         $team_rank['total_score'] = $team->scorecreep_total_score;
         $teams[$team->nid] = $team;
