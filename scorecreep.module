@@ -328,7 +328,6 @@ function bout_page_view($node) {
   dvm($node);
   return node_show($node);
 }
-/
 
 /**
  * Implements hook_help().
