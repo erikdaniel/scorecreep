@@ -16,37 +16,42 @@ module_load_include('inc', 'scorecreep', 'scorecreep.utils');
  * mode that will live at http://example.com/?q=examples/scorecreep
  */
 function scorecreep_menu() {
-  $items['scorecreep/bout'] = array(
-    'page callback' => 'scorecreep_page',
-    'access arguments' => array('access content'),
-    'title' => 'PSi Scorecreep',
-  );
-  $items['scorecreep/%'] = array(
-    'page callback' => 'scorecreep_tournament_page',
-    'access arguments' => array('access content'),
-    'title' => 'PSi Scorecreep',
-    'page arguments' => array(1),
-    'file' => 'scorecreep.pages.inc',
-  );
-  $items['scorecreep/%/scores'] = array(
-    'title callback' => 'tournament_scores_page_title',
-    'title arguments' => array(1),
+  // todo add bout view
+  // TODO add scores view
+  // TODO add group piece view
+  $items['node/%node/scores'] = array(
+    'title' => 'Prelim Scores',
     'page callback' => 'tournament_scores_page',
-    'access arguments' => array('access content'),
+    'access callback' => 'scorecreep_scores_access',
+    'access arguments' => array(1),
     'page arguments' => array(1),
-    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 5,
     'file' => 'scorecreep.pages.inc',
   );
-  $items['scorecreep/%/grouppieces'] = array(
-    'title callback' => 'grouppiece_scores_page_title',
-    'title arguments' => array(1),
+  
+  $items['node/%node/grouppieces'] = array(
+    'title' => 'Group Piece Scores',
     'page callback' => 'tournament_group_scores_page',
-    'access arguments' => array('access content'),
+    'access callback' => 'scorecreep_group_scores_access',
+    'access arguments' => array(1),
     'page arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
     'weight' => 10,
     'file' => 'scorecreep.pages.inc',
   );
+  
+  $items['node/%node/bouts'] = array(
+    'title' => 'Bouts',
+    'description' => 'Bouts for this tournament.',
+    'page callback' => 'scorecreep_bouts_list',
+    'page arguments' => array(1),
+    'access arguments' => array('access content'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 1,
+    'file' => 'scorecreep.pages.inc',
+  );
+
   $items['scorecreep/bout/%node'] = array(
     'title callback' => 'bout_page_title',
     'title arguments' => array(2),
@@ -95,6 +100,18 @@ $items['node/%node/performances'] = array(
   );
 
   return $items;
+}
+/**
+ * Access callback for scorecreep content
+ */
+function scorecreep_scores_access($node) {
+  return $node->type == 'tournament' || $node->type == 'individual_tournament';
+}
+/**
+ * Access callback for scorecreep content
+ */
+function scorecreep_group_scores_access($node) {
+  return $node->type == 'tournament';
 }
 
 /**
@@ -204,14 +221,6 @@ function bout_page_title($node) {
   return '';
 }
 
-function tournament_scores_page_title($term) {
-  return t("@term Prelim Scores", array("@term" => strtoupper($term)));// TODO see if this is safe
-}
-
-function grouppiece_scores_page_title($term) {
-  return t("@term Group Piece Scores", array("@term" => strtoupper($term)));// TODO see if this is safe
-}
-
 /**
  * Implements hook_block_info().
  */
@@ -293,17 +302,7 @@ function scorecreep_block_view($delta = '') {
   );
   return $block;
 }
-/**
- * Custom callback that builds our content and returns it to the browser.
- *
- * @return
- *   a build array
- *
- */
-function scorecreep_page() {
-  // TODO List tournaments
-  return t('Welcome to the PSi Scorecreep.');
-}
+
 /**
  * Custom callback for bout pages.
  * @return

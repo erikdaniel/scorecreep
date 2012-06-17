@@ -1,8 +1,29 @@
 <?php
 
+/**
+ * Display the tournament_bouts_list view, passing in the tid for the tournament.
+ */
+function scorecreep_bouts_list($node) {
+ // Overrides individual tournament
+  if ($node->type == 'individual_tournament' && function_exists('iwps_bouts_list')) {
+    return iwps_bouts_list($node);
+  }
+
+  drupal_set_title($node->title . ' : Bouts');
+
+  $view = views_get_view('tournament_bouts_list');
+  $term = scorecreep_get_tournament_term($node);
+  $tid = $term->tid;
+  $args[] = $tid;
+
+  $display_id = 'default';
+  $output = $view->execute_display($display_id, $args);
+  return $output;
+}
+
+
+
 function bout_page_performances ($node) {
-  //$bout_tid = bout_term_id_load($node);
-  //dvm($node);
   if ($node->type != 'scorecreep_bout') {
     return FALSE; //TODO FIX THIS
   }
@@ -38,40 +59,18 @@ function bout_page_performances ($node) {
     $output = t('No scores in this bout.');
   }
   return $output;
-
 }
 
-function scorecreep_tournament_page($term) {
-  $tournament = array_shift(array_values(taxonomy_get_term_by_name($term)));
-  $nps_bout_terms = taxonomy_get_children($tournament->tid);
-  $bouts = array();
-  drupal_set_title($tournament->description);
-  /*
-  foreach ($nps_bout_terms as $bout) {
-    $name = check_plain($bout->name);
-    $id = str_replace("Bout ", "", $name);
-    $path = 'scorecreep/bout/' . check_plain($term) . '-' . $id;
-    $bouts[] = l($name, $path);   
+function tournament_scores_page($node) {
+  // Overrides individual tournament
+  if ($node->type == 'individual_tournament' && function_exists('iwps_scores_page')) {
+    return iwps_scores_page($node);
   }
-  */
 
-  $output = '';//t($tournament->description);
-  $output = l('Prelim Scores', 'scorecreep/' . check_plain($term) . '/scores');
-  /*
-  if (!empty($bouts)) {
-    $output .= theme_item_list(array('items' => $bouts, 'title' => 'Bouts', 'type' => 'ul', 'attributes' => array('id' => 'bout_list')));
-  } else {
-    $output .= t('No bouts set for this tournament.');
-  }
-  */
-  return $output;
-}
-
-function tournament_scores_page($term) {
-  $tournament = array_shift(array_values(taxonomy_get_term_by_name($term)));
+  $tournament = scorecreep_get_tournament_term($node);
   $nps_bout_terms = taxonomy_get_children($tournament->tid);
  
-  drupal_set_title($tournament->description . ' : Prelim Scores');
+  drupal_set_title($node->title . ' : Prelim Scores');
   $totals = _scorecreep_get_ranks_for_all_teams($tournament->tid);  
   $output = t('');
   if (!empty($totals)) {
@@ -91,11 +90,12 @@ function tournament_scores_error($term) {
 	return t("Oops! Having a little trouble! We are looking into it and will have this page fixed as soon as possible.");
 }
 
-function tournament_group_scores_page($term) {
-  $tournament = array_shift(array_values(taxonomy_get_term_by_name($term)));
+function tournament_group_scores_page($node) {
+  $tournament = scorecreep_get_tournament_term($node);
   $nps_bout_terms = taxonomy_get_children($tournament->tid);
  
   drupal_set_title($tournament->description . ' : Group Piece Scores');
+
   $totals = _scorecreep_get_ranks_for_all_group_pieces($tournament->tid); 
   $output = t('The below list includes teams in semi-finals. ');
   if (!empty($totals)) {

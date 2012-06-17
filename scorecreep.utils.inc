@@ -47,6 +47,12 @@ function bout_term_id_load($str) {
   return $bout_term_id;
 }
 
+function scorecreep_get_tournament_term($node) {
+  $shortname = array_shift(field_get_items('node', $node, 'field_shortname'));
+  $shortname = $shortname['safe_value'];
+  return array_shift(array_values(taxonomy_get_term_by_name($shortname)));
+}
+
 
 /**
  * Get total scores in about and set bout ranks.
