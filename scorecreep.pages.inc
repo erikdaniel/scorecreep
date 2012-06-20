@@ -1,24 +1,16 @@
 <?php
-
 /**
  * Display the tournament_bouts_list view, passing in the tid for the tournament.
  */
 function scorecreep_bouts_list($node) {
- // Overrides individual tournament
-  if ($node->type == 'individual_tournament' && function_exists('iwps_bouts_list')) {
-    return iwps_bouts_list($node);
-  }
-
   drupal_set_title($node->title . ' : Bouts');
-
   $view = views_get_view('tournament_bouts_list');
   $term = scorecreep_get_tournament_term($node);
-  $tid = $term->tid;
-  $args[] = $tid;
-
-  $display_id = 'default';
-  $output = $view->execute_display($display_id, $args);
-  return $output;
+  $args = array();
+  if (isset($term)) {
+    $args[] = $term->tid;
+  }
+  return $view->execute_display('default', $args);
 }
 
 
@@ -67,11 +59,17 @@ function tournament_scores_page($node) {
     return iwps_scores_page($node);
   }
 
-  $tournament = scorecreep_get_tournament_term($node);
-  $nps_bout_terms = taxonomy_get_children($tournament->tid);
- 
   drupal_set_title($node->title . ' : Prelim Scores');
-  $totals = _scorecreep_get_ranks_for_all_teams($tournament->tid);  
+  $totals = array();
+  $tournament = scorecreep_get_tournament_term($node);
+  if (isset($tournament)) {
+    $nps_bout_terms = taxonomy_get_children($tournament->tid);
+    $totals = _scorecreep_get_ranks_for_all_teams($tournament->tid);  
+  }
+  else {
+    $nps_bout_terms = array();
+  }
+ 
   $output = t('');
   if (!empty($totals)) {
     foreach ($totals as $r) {
@@ -92,11 +90,16 @@ function tournament_scores_error($term) {
 
 function tournament_group_scores_page($node) {
   $tournament = scorecreep_get_tournament_term($node);
-  $nps_bout_terms = taxonomy_get_children($tournament->tid);
- 
-  drupal_set_title($tournament->description . ' : Group Piece Scores');
+  $nps_bout_terms = array();
+  $totals = array();
 
-  $totals = _scorecreep_get_ranks_for_all_group_pieces($tournament->tid); 
+  if (isset($tournament)) {
+    $nps_bout_terms = taxonomy_get_children($tournament->tid);
+    $totals = _scorecreep_get_ranks_for_all_group_pieces($tournament->tid); 
+  }
+ 
+  drupal_set_title($node->title . ' : Group Piece Scores');
+
   $output = t('The below list includes teams in semi-finals. ');
   if (!empty($totals)) {
     foreach ($totals as $r) {

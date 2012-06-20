@@ -18,37 +18,37 @@ module_load_include('inc', 'scorecreep', 'scorecreep.utils');
 function scorecreep_menu() {
   // todo add bout view
   // TODO add scores view
-  // TODO add group piece view
   $items['node/%node/scores'] = array(
     'title' => 'Prelim Scores',
     'page callback' => 'tournament_scores_page',
-    'access callback' => 'scorecreep_scores_access',
+    'access callback' => 'scorecreep_access',
     'access arguments' => array(1),
     'page arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 5,
     'file' => 'scorecreep.pages.inc',
+    'weight' => 10,
   );
   
   $items['node/%node/grouppieces'] = array(
     'title' => 'Group Piece Scores',
     'page callback' => 'tournament_group_scores_page',
-    'access callback' => 'scorecreep_group_scores_access',
-    'access arguments' => array(1),
     'page arguments' => array(1),
+    'access callback' => 'scorecreep_access',
+    'access arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 10,
+    'weight' => 11,
     'file' => 'scorecreep.pages.inc',
   );
   
-  $items['node/%node/bouts'] = array(
+  $items['node/%node/prelim-bouts'] = array(
     'title' => 'Bouts',
     'description' => 'Bouts for this tournament.',
     'page callback' => 'scorecreep_bouts_list',
     'page arguments' => array(1),
-    'access arguments' => array('access content'),
+    'access callback' => 'scorecreep_access',
+    'access arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
-    'weight' => 1,
+    'weight' => 2,
     'file' => 'scorecreep.pages.inc',
   );
 
@@ -101,18 +101,6 @@ $items['node/%node/performances'] = array(
 
   return $items;
 }
-/**
- * Access callback for scorecreep content
- */
-function scorecreep_scores_access($node) {
-  return $node->type == 'tournament' || $node->type == 'individual_tournament';
-}
-/**
- * Access callback for scorecreep content
- */
-function scorecreep_group_scores_access($node) {
-  return $node->type == 'tournament';
-}
 
 /**
  * Access callback for the performances tab.
@@ -123,6 +111,13 @@ function performance_tab_access($node) {
     $bout_type = $node->field_bout_type[$node->language][0]['value'];
   }
   return $node->type == 'scorecreep_bout' &&(!isset($bout_type) || $bout_type == 'team');// && user_access('view published content');
+}
+
+/**
+ * Access callback for scorecreep content
+ */
+function scorecreep_access($node) {
+  return $node->type == 'tournament';
 }
 
 /**
