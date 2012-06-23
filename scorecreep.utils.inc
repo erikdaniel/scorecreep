@@ -40,17 +40,28 @@ function bout_term_id_load($str) {
     foreach ($nps_bout_terms as $term) {
       $b = "Bout " . $arr[1];
       if ($term->name == $b) {
-        $bout_term_id = $term->tid;
+        return $term;
       }
     }
   }
-  return $bout_term_id;
+  return null;
 }
 
 function scorecreep_get_tournament_term($node) {
   $shortname = array_shift(field_get_items('node', $node, 'field_shortname'));
   $shortname = $shortname['safe_value'];
   return array_shift(array_values(taxonomy_get_term_by_name($shortname)));
+}
+
+/**
+ * Utility function to get bout type of a node
+ */
+function _scorecreep_get_bout_type($node) {
+  $bout_type = NULL;
+  if ($node->type == 'scorecreep_bout' && isset($node->field_bout_type[$node->language])) {
+    $bout_type = $node->field_bout_type[$node->language][0]['value'];
+  }
+  return $bout_type;  
 }
 
 
@@ -210,7 +221,6 @@ function _scorecreep_get_teams_in_bout_by_tid($tid) {
     ->fieldCondition('field_team_bouts', 'tid', $tid, '=');
   $arr = $query->execute();
   return $arr['node'];
-
 }
 
 function _scorecreep_get_bout_node_id_from_tid($tid) {
@@ -228,16 +238,14 @@ function _scorecreep_get_performers_from_team_id(&$team) {
   if (isset($arr['user']) ) {
     $poets = $arr['user'];
   }
-   $poets = array();
+  $poets = array();
   $query = db_select('field_data_field_user_teams', 'tm');
-  $query->leftJoin('node', 'n', 'tm.field_user_teams_nid = n.nid');
-  $query->addField('tm', 'entity_id');
-  $query->addField('tm', 'field_user_teams_nid');
-  $query->addField('n', 'title');
-  $query->condition("tm.field_user_teams_nid", $team, 'IN');  
+    $query->leftJoin('node', 'n', 'tm.field_user_teams_nid = n.nid');
+    $query->addField('tm', 'entity_id');
+    $query->addField('tm', 'field_user_teams_nid');
+    $query->addField('n', 'title');
+    $query->condition("tm.field_user_teams_nid", $team, 'IN');  
   $poets = $query->execute()->fetchAllAssoc('entity_id');//(PDO::FETCH_ASSOC);
-
-
   return  $poets;//array_shift(array_values($arr['user']));
 }
 

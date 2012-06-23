@@ -16,8 +16,6 @@ module_load_include('inc', 'scorecreep', 'scorecreep.utils');
  * mode that will live at http://example.com/?q=examples/scorecreep
  */
 function scorecreep_menu() {
-  // todo add bout view
-  // TODO add scores view
   $items['node/%node/scores'] = array(
     'title' => 'Prelim Scores',
     'page callback' => 'tournament_scores_page',
@@ -52,39 +50,15 @@ function scorecreep_menu() {
     'file' => 'scorecreep.pages.inc',
   );
 
-  $items['scorecreep/bout/%node'] = array(
-    'title callback' => 'bout_page_title',
-    'title arguments' => array(2),
-    // The page callback also invokes drupal_set_title() in case
-    // the menu router's title is overridden by a menu link.
-    'page callback' => 'bout_page_view',
-    'page arguments' => array(2),
-    'access callback' => 'node_access',
-    'access arguments' => array('view', 2),
+  $items['node/%node/performances'] = array(
+    'title' => 'Performances',
+    'page callback' => 'bout_page_performances',
+    'page arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'scorecreep.pages.inc',
+    'access callback' => array('performance_tab_access'),
+    'access arguments' => array(1),
   );
-  $items['scorecreep/bout/%node/view'] = array(
-    'title' => 'View',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10,
-  );
-$items['scorecreep/bout/%node/performances'] = array(
-      'title' => 'Performances',
-      'page callback' => 'bout_page_performances',
-      'page arguments' => array(2),
-      'type' => MENU_LOCAL_TASK,
-      'file' => 'scorecreep.pages.inc',
-      'access callback' => array('performance_tab_access'),
-      'access arguments' => array(2),
-  );
-$items['node/%node/performances'] = array(
-      'title' => 'Performances',
-      'page callback' => 'bout_page_performances',
-      'page arguments' => array(1),
-      'type' => MENU_LOCAL_TASK,
-      'file' => 'scorecreep.pages.inc',
-      'access callback' => array('performance_tab_access'),
-      'access arguments' => array(1),
-    );
 
   $items['scorecreep/bout/%bout_term_id/add/performance'] = array(
     'title' => 'Add Performance',
@@ -96,9 +70,7 @@ $items['node/%node/performances'] = array(
     'type' => MENU_CALLBACK,
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'description' => '',
-    //'file' => 'node.pages.inc',
   );
-
   return $items;
 }
 
@@ -123,10 +95,10 @@ function scorecreep_access($node) {
 /**
  * Returns a node submission form.
  */
-function performance_add($bout) {
+function performance_add($bout_term) {
   global $user;
   $type = 'scorecreep_performance';
-  $bout_term = taxonomy_term_load($bout);
+  //$bout_term = taxonomy_term_load($bout);
   $types = node_type_get_types();
   $node = (object) array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => LANGUAGE_NONE);
   drupal_set_title(t('Add @name to @bout', array('@name' => $types[$type]->name, '@bout' => $bout_term->name)), PASS_THROUGH);
@@ -147,7 +119,6 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
 
     $teams =  _scorecreep_get_teams_in_bout_by_tid($bout_id);
     $team_ids = array();
- 
 
     $options = $form['field_performance_team']['und']['#options'];
     $newarr = array('_none' => '- Select a value -');
@@ -207,13 +178,6 @@ function scorecreep_performance_set_redirect( $form, &$form_state) {
   // TODO redo this to get the correct bout id
   $alias = drupal_lookup_path('alias', 'node/' . $bout_id);
   $form_state['redirect'] = $alias;
-}
-
-/**
- * Bout title creation Callback.
- */
-function bout_page_title($node) {
-  return '';
 }
 
 /**
@@ -299,31 +263,6 @@ function scorecreep_block_view($delta = '') {
 }
 
 /**
- * Custom callback for bout pages.
- * @return
- *   a build array
- */
-function bout_page_view($node) {
-  // If there is a menu link to this node, the link becomes the last part
-  // of the active trail, and the link name becomes the page title.
-  // Thus, we must explicitly set the page title to be the node title.
-  dvm($node);
-  drupal_set_title($node->title);
-  $uri = entity_uri('node', $node);
-  // Set the node path as the canonical URL to prevent duplicate content.
-  drupal_add_html_head_link(array('rel' => 'canonical', 'href' => url($uri['path'], $uri['options'])), TRUE);
-  // Set the non-aliased path as a default shortlink.
-  drupal_add_html_head_link(array('rel' => 'shortlink', 'href' => url($uri['path'], array_merge($uri['options'], array('alias' => TRUE)))), TRUE);
-
-  $node->content['scores'] = array(
-    '#markup' => views_embed_view('performances_in_bout'),
-    '#weight' => 10,
-  );
-  dvm($node);
-  return node_show($node);
-}
-
-/**
  * Implements hook_help().
  */
 function scorecreep_help($path, $arg) {
@@ -367,6 +306,24 @@ function scorecreep_disable() {
   foreach ($scRoles as $r) {
     if (in_array($r, $roles)) {
       user_role_delete($r);
+    }
+  }
+}
+
+/**
+ * Implements hook_load.
+ */
+function scorecreep_node_load($nodes, $types) {
+  foreach ($nodes as $node) {
+    if (_scorecreep_get_bout_type($node) == 'team') {
+      $bout_tid = $node->field_bout['und'][0]['tid'];
+      $teams_in_bout = array_keys(_scorecreep_get_teams_in_bout_by_tid($bout_tid));
+      $node->scorecreep_teams = node_load_multiple($teams_in_bout);
+    }
+    else if ($node->type == 'scorecreep_team') {
+      $team = array($node->nid);
+      $perfids = array_keys(_scorecreep_get_performers_from_team_id($team));
+      $node->scorecreep_performers = user_load_multiple($perfids);
     }
   }
 }
