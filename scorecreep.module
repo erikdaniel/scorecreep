@@ -201,6 +201,11 @@ function scorecreep_block_info() {
 function scorecreep_block_view($delta = '') {
   $output = '';
   $path = explode('/', request_path());
+  // TODO This shouldn't rely on the path
+  // Check for 'node' in args and load the node,
+  // THen check for node type, and bout type
+  // if its a team bout, get the bout term and go 
+  // from there.
   switch ($delta) {
     case 'bout_scores':
     $subject = t('Total Scores');
@@ -328,3 +333,47 @@ function scorecreep_node_load($nodes, $types) {
   }
 }
 
+
+/**
+ * Implements hook_node_view.
+ */
+function scorecreep_node_view($node, $view_mode, $langcode) {
+  $bout_type = _scorecreep_get_bout_type($node);
+  if ($bout_type == 'team') {
+    $teams = array();
+    foreach ($node->scorecreep_teams as $team) {
+      $team_array = array(
+        'data' => t($team->title) . ' <span class="team-city">(' .  t($team->field_team_city['und'][0]['value']) . ", ".  t($team->field_team_state['und'][0]['value']) . ')</span>',
+        'children' => array(),
+      );
+      $count = 1;
+      foreach ($team->scorecreep_performers as $performer) {
+        $team_array['children'][] = $count . ' ' . t($performer->name); 
+        $count++;
+      }
+      $teams[] = $team_array;
+    }
+    $arr = array(
+      '#theme' => 'item_list',
+      "#items" => $teams,
+      "#attributes" => array(
+        "class" => "scorecreep-teams",
+      ),
+    );
+    $node->content['scorecreep_performer_list'] = $arr;
+    $node->content['scorecreep_grid'] = array(
+        "#type" => 'markup',
+        "#prefix" => "<div class='scorecreep-grid-4x4",
+        "#markup" => "replace me",
+        "#suffix" => "</div>",
+    );
+    
+    $node->scorecreep_order = array(
+      array("A", "B", "C", "D"),
+      array( "C", "A", "D", "B"),
+      array("D", "C", "B", "A"),
+      array("B", "D", "A", "C"),
+    );
+
+  }
+}
