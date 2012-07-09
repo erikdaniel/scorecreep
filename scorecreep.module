@@ -186,10 +186,6 @@ function scorecreep_performance_set_redirect( $form, &$form_state) {
 function scorecreep_block_info() {
   $blocks = array();
 
-  $blocks['bout_scores'] = array(
-    'info' => t('Display scores and ranks for bout.'),
-    'cache' => DRUPAL_NO_CACHE,
-  );
   $blocks['team_scores'] = array(
     'info' => t('Display scores and ranks for a team.'),
     'cache' => DRUPAL_NO_CACHE,
@@ -207,39 +203,7 @@ function scorecreep_block_view($delta = '') {
   // if its a team bout, get the bout term and go 
   // from there.
   switch ($delta) {
-    case 'bout_scores':
-    $subject = t('Total Scores');
-    if ($path[0] == 'scorecreep' && $path[1] == 'bout') {
-      $bout_id = bout_id_or_alias_load($path[2]);
-      if ($node = menu_get_object()) {
-        $bout_id = $node->field_bout['und'][0]['tid'];
-      }
-      $scores = _scorecreep_get_bout_scores($bout_id);
-      $entries = _scorecreep_parse_bout_scores($scores);
-
-      if (!empty($entries)) {
-        foreach ($entries as $entry) {
-          // Sanitize the data before handing it off to the theme layer.
-          $e = array_map('check_plain', $entry);
-          $rows[] = array('team' => $e['team'], 
-                          'rank' => $e['rank'],
-                          'score' => $e['score']
-                          );
-        }
-        // Make a table for them.
-        $header = array(t('Team'), t('Rank'), t('Score'));
-        $output .= theme('table', array('header' => $header, 'rows' => $rows));
-      }
-      else {
-        $output = t('No scores in this bout.');
-      }
-    }
-    else {
-      $output = t('No bout id.');
-    }
-    break;
-
-  case 'team_scores':
+    case 'team_scores':
     $team = array();
     $subject = t('Team Scores');
     $output = '';
@@ -374,6 +338,56 @@ function scorecreep_node_view($node, $view_mode, $langcode) {
       array("D", "C", "B", "A"),
       array("B", "D", "A", "C"),
     );
+    
+    // Total Scores
+    _scorecreep_bout_total_scores_view($node);  
 
+    // Scores by rotation (view)
+    _scorecreep_bout_scores_by_rotation($node);
   }
+}
+
+function _scorecreep_bout_total_scores_view(&$node) {
+  $subject = t('Total Scores');
+  $bout_id = $node->field_bout['und'][0]['tid'];
+  $scores = _scorecreep_get_bout_scores($bout_id);
+  $entries = _scorecreep_parse_bout_scores($scores);
+
+  if (!empty($entries)) {
+    foreach ($entries as $entry) {
+      // Sanitize the data before handing it off to the theme layer.
+      $e = array_map('check_plain', $entry);
+      $rows[] = array('team' => $e['team'], 
+                      'rank' => $e['rank'],
+                      'score' => $e['score']
+                      );
+    }
+    // Make a table for them.
+    $header = array(t('Team'), t('Rank'), t('Score'));
+    $node->content['total-scores'] = array(
+        '#theme' => 'table',
+        '#header' => array(t('Team'), t('Rank'), t('Score')),
+        '#rows' => $rows,
+        '#prefix' => "<h2>$subject</h2>",
+    );
+  }
+  else {
+    $node->content['total-scores'] = array(
+      '#type' => 'markup',
+      '#prefix' => "<h2>$subject</h2>",
+      '#markup' => t('No scores in this bout.'),
+    );
+  }
+}
+
+function _scorecreep_bout_scores_by_rotation(&$node) {
+  $bout_id = $node->field_bout['und'][0]['tid'];
+
+  $view = views_get_view('scores_by_rotation');
+  $args = array();
+  if (isset($bout_id)) {
+    $args[] = $bout_id;
+  }
+  
+  $node->content['rotation-scores'] =  $view->execute_display('default', $args);
 }
