@@ -577,3 +577,18 @@ function _scorecreep_group_piece_final_sort(&$group_pieces) {
 	    array_multisort($rank, SORT_ASC, $score, SORT_DESC, $group_pieces);
 	}
 }
+
+function _scorecreep_get_terms_for_teams($teams) {
+  $query = db_select('field_data_field_term_tournament', 'fd');
+    $query->addField('fd', 'entity_id');
+    $query->condition("fd.entity_id", $teams, "IN");  
+    $query->leftJoin('taxonomy_term_data', 'tt', 'fd.field_term_tournament_tid = tt.tid');
+    $query->addField('tt', 'name');
+                  
+  $arr = array_values($query->execute()->fetchAll(PDO::FETCH_ASSOC));
+  $result = array();
+  for ($i = 0; $i < count($arr); $i++) {
+    $result[$arr[$i]['entity_id']] = $arr[$i]['name']; 
+  }
+  return $result;
+}

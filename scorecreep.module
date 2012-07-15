@@ -107,6 +107,21 @@ function performance_add($bout_term) {
 }
 
 /**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function scorecreep_form_user_profile_form_alter(&$form, &$form_state, $form_id) {
+  $options = $form['field_user_teams']['und']['#options'];
+  $keys = array_keys($options);
+  array_shift($keys);// get rid of the _none key
+  $terms =  _scorecreep_get_terms_for_teams($keys);
+  foreach ($options as $key => $val) {
+    if (isset($terms[$key])) {
+      $form['field_user_teams']['und']['#options'][$key] =  $val . t(' (@team)', array('@team' => $terms[$key]));
+    }
+  }
+}
+
+/**
  * Implements hook_FORM_TYPE_form_alter().
  *
  */
@@ -193,7 +208,9 @@ function scorecreep_block_info() {
   return $blocks;
 }
 
-
+/**
+ * Implements hook_block_view.
+ */
 function scorecreep_block_view($delta = '') {
   $output = '';
   $path = explode('/', request_path());
