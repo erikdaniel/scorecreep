@@ -99,7 +99,7 @@ function _scorecreep_parse_bout_scores($scores) {
         $bout_scores[$score['field_performance_team_nid']]['tiebreakloser'] = FALSE;
       }
     }
-    // TODO handle ties
+
     array_sort_by_subval($bout_scores, "score");
     $team_names = node_load_multiple($teams);
     foreach ($bout_scores as $score) {
@@ -391,11 +391,11 @@ function _scorecreep_get_ranks_for_team(&$team) {
     }
   }
   $bid = array();
- foreach ($team_ranks as $key => $row) {
+  foreach ($team_ranks as $key => $row) {
     $bid[$key]  = $row['bid'];
- }
+  }
   
- array_multisort($bid, SORT_ASC,  $team_ranks);
+  array_multisort($bid, SORT_ASC,  $team_ranks);
   return $team_ranks;
 }
 

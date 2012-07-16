@@ -71,6 +71,19 @@ function scorecreep_menu() {
     'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
     'description' => '',
   );
+
+  $items['node/%node/add/performance'] = array(
+    'title' => 'Add Performance',
+    'title callback' => 'check_plain',
+    'page callback' => 'node_performance_add',
+    'page arguments' => array(1),
+    'access callback' => 'node_access',
+    'access arguments' => array('create', 'scorecreep_performance'),
+    'type' => MENU_CALLBACK,
+    'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE,
+    'description' => '',
+  );
+
   return $items;
 }
 
@@ -93,6 +106,13 @@ function scorecreep_access($node) {
 }
 
 /**
+ * Updated node submission form.
+ */
+function node_performance_add($node) {
+  $bout_term = taxonomy_term_load($node->field_bout['und'][0]['tid']);
+  return performance_add($bout_term);
+}
+/**
  * Returns a node submission form.
  */
 function performance_add($bout_term) {
@@ -109,14 +129,16 @@ function performance_add($bout_term) {
 /**
  * Implements hook_form_FORM_ID_alter().
  */
-function scorecreep_form_user_profile_form_alter(&$form, &$form_state, $form_id) {
-  $options = $form['field_user_teams']['und']['#options'];
-  $keys = array_keys($options);
-  array_shift($keys);// get rid of the _none key
-  $terms =  _scorecreep_get_terms_for_teams($keys);
-  foreach ($options as $key => $val) {
-    if (isset($terms[$key])) {
-      $form['field_user_teams']['und']['#options'][$key] =  $val . t(' (@team)', array('@team' => $terms[$key]));
+function scorecreep_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'user_profile_form' || $form_id == 'user_register_form') {
+    $options = $form['field_user_teams']['und']['#options'];
+    $keys = array_keys($options);
+    array_shift($keys);// get rid of the _none key
+    $terms =  _scorecreep_get_terms_for_teams($keys);
+    foreach ($options as $key => $val) {
+      if (isset($terms[$key])) {
+        $form['field_user_teams']['und']['#options'][$key] =  $val . t(' (@team)', array('@team' => $terms[$key]));
+      }
     }
   }
 }
@@ -131,6 +153,8 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
   if (isset($bout_id)) {
     $bout_node_id = _scorecreep_get_bout_node_id_from_tid($bout_id);
     $form_state['scorecreep']['bout'] = $bout_node_id->nid;
+
+    $alias = drupal_lookup_path('alias', 'node/' . $bout_id);
 
     $teams =  _scorecreep_get_teams_in_bout_by_tid($bout_id);
     $team_ids = array();
@@ -168,7 +192,7 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
     $new_performers = array('_none' => '- None -');
 
     foreach($bout_performers as $key => $val) {
-      $new_performers[$key] = '(' . $val->title . ')' . $all_performers[$key];
+      $new_performers[$key] = '(' . $val->title . ') ' . $all_performers[$key];
     }
     $form['field_performance_performer']['und']['#options'] = $new_performers;
 
@@ -186,12 +210,15 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
 
 /**
  * Handler to set the redirect on a performance submit
- * back to the bout.
+ * back to the bout node.
+ * Handles some legacy scorecreep/ stuff.
  */
 function scorecreep_performance_set_redirect( $form, &$form_state) {
   $bout_id = $form_state['scorecreep']['bout'];
-  // TODO redo this to get the correct bout id
   $alias = drupal_lookup_path('alias', 'node/' . $bout_id);
+  if(empty($alias)) {
+    $alias = 'node/' . $bout_id;
+  }
   $form_state['redirect'] = $alias;
 }
 
@@ -385,14 +412,15 @@ function _scorecreep_bout_total_scores_view(&$node) {
         '#theme' => 'table',
         '#header' => array(t('Team'), t('Rank'), t('Score')),
         '#rows' => $rows,
-        '#prefix' => "<h2>$subject</h2>",
+        '#prefix' => "<h2 class='total-scores-title'>$subject</h2>",
     );
   }
   else {
     $node->content['total-scores'] = array(
       '#type' => 'markup',
-      '#prefix' => "<h2>$subject</h2>",
+      '#prefix' => "<div class='total-scores-block'><h2 class='total-scores-title'>$subject</h2>",
       '#markup' => t('No scores in this bout.'),
+      '#suffix' => "</div>",
     );
   }
 }
