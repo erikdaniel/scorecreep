@@ -148,7 +148,16 @@ function scorecreep_form_alter(&$form, &$form_state, $form_id) {
  *
  */
 function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_state, $form_id) {
-  $bout_id = isset($form_state['build_info']['args'][1]->bout_id) ? $form_state['build_info']['args'][1]->bout_id:null;
+  $bout_id = null;
+  
+  if (isset($form_state['build_info']['args'][1]->bout_id)) {
+    $bout_id = $form_state['build_info']['args'][1]->bout_id;
+  }
+  elseif (isset($form['#node']->field_bout) && isset($form['#node']->field_bout['und'][0]['tid'])) {
+    $bout_id = $form['#node']->field_bout['und'][0]['tid'];
+  }
+
+
   // only edit the form if we are in a bout/%/performance/add
   if (isset($bout_id)) {
     $bout_node_id = _scorecreep_get_bout_node_id_from_tid($bout_id);

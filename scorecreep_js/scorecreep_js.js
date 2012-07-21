@@ -17,6 +17,10 @@ jQuery(document).ready(function($) {
         $(item).remove();
       }
     });
-
+    $perfList.children('option').eq(0).attr('selected', 'selected');
   });
+
+  if ($sel.val() !== '_none') {
+    $sel.trigger('change');
+  }
 });
