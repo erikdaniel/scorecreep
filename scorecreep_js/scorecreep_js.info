@@ -1,0 +1,6 @@
+name = Scorecreep Javascript
+description = Additional javascript for PSi Scorecreep
+package = PSi
+core = 7.x
+dependencies[] = scorecreep
+files[] = scorecreep_js.module

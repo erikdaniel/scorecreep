@@ -1,0 +1,11 @@
+<?php
+
+
+/**
+ * Implements hook_FORM_TYPE_form_alter().
+ *
+ */
+function scorecreep_js_form_scorecreep_performance_node_form_alter(&$form, &$form_state, $form_id) {
+  $path = drupal_get_path('module', 'scorecreep_js');
+  drupal_add_js($path . '/scorecreep_js.js');
+}
