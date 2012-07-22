@@ -1,0 +1,10 @@
+name = Scorecreep Semis
+description = Semi-final bout submodule for scorecreep
+package = PSi
+core = 7.x
+dependencies[] = views
+dependencies[] = scorecreep
+dependencies[] = references
+
+files[] = scorecreep_semis.module
+files[] = scorecreep_semis.pages.inc

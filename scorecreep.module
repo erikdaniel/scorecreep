@@ -118,7 +118,6 @@ function node_performance_add($node) {
 function performance_add($bout_term) {
   global $user;
   $type = 'scorecreep_performance';
-  //$bout_term = taxonomy_term_load($bout);
   $types = node_type_get_types();
   $node = (object) array('uid' => $user->uid, 'name' => (isset($user->name) ? $user->name : ''), 'type' => $type, 'language' => LANGUAGE_NONE);
   drupal_set_title(t('Add @name to @bout', array('@name' => $types[$type]->name, '@bout' => $bout_term->name)), PASS_THROUGH);
@@ -128,6 +127,8 @@ function performance_add($bout_term) {
 
 /**
  * Implements hook_form_FORM_ID_alter().
+ * 
+ * Display the Tournament along with the team name in the select box on user create/edit form.
  */
 function scorecreep_form_alter(&$form, &$form_state, $form_id) {
   if ($form_id == 'user_profile_form' || $form_id == 'user_register_form') {
@@ -146,6 +147,8 @@ function scorecreep_form_alter(&$form, &$form_state, $form_id) {
 /**
  * Implements hook_FORM_TYPE_form_alter().
  *
+ * Customize the performance add/edit form.
+ *
  */
 function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_state, $form_id) {
   $bout_id = null;
@@ -158,7 +161,7 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
   }
 
 
-  // only edit the form if we are in a bout/%/performance/add
+  // only edit the form if this is a bout.
   if (isset($bout_id)) {
     $bout_node_id = _scorecreep_get_bout_node_id_from_tid($bout_id);
     $form_state['scorecreep']['bout'] = $bout_node_id->nid;
@@ -175,9 +178,13 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
       $team_ids[] = $key;
     }
     $form['field_performance_team']['und']['#options'] = $newarr;
-
+    
     $num_perfs_in_bout =  count(_scorecreep_get_performances_in_bout($bout_id)); 
     $rotation = 1;
+    // TODO make this more flexibile
+    // read the # rotations from tourney node
+    // compare to # teams and # performances
+    // break it out into its own function
     if ($num_perfs_in_bout < 4) {
     }
     else if ($num_perfs_in_bout < 8) {

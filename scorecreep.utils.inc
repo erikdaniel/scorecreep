@@ -1,5 +1,8 @@
 <?php
 define("NUM_ROTATIONS", 4);
+define("PRELIM_BOUT_TYPE", "team");
+define("SEMIFINAL_BOUT_TYPE", "team_semifinal");
+define("FINAL_BOUT_TYPE", "team_final");
 
 /** 
  * Callback to return the node id from a given string.
@@ -371,13 +374,10 @@ function _scorecreep_get_ranks_for_team(&$team) {
     $terms[] = $bout['tid'];
   }
   for ($i = 0; $i < count($terms); $i++) {
-    //$nodes = array_merge($nodes, (array)taxonomy_select_nodes($terms[$i]));
     $x = taxonomy_term_load($terms[$i]);
-    //print_r($x);
     $ranks[$x->name] = _scorecreep_parse_bout_scores(_scorecreep_get_bout_scores($terms[$i]));
   }
   $team_ranks = array();
-  //for ($i = 0; $i < count($ranks); $i++) {
   foreach ($ranks as $key => $rank) {
     for ($j = 0; $j<count($rank); $j++) {
       if ($rank[$j]['team'] == $team->title) {
@@ -385,16 +385,18 @@ function _scorecreep_get_ranks_for_team(&$team) {
           'bout' => $key,
           'rank' => $rank[$j]['rank'],
           'score' => $rank[$j]['score'],
-	  'bid' => intval(str_replace('Bout ', '', $key)),
+          'bid' => intval(str_replace('Bout ', '', $key)),
         );
       }
     }
   }
+
   $bid = array();
   foreach ($team_ranks as $key => $row) {
     $bid[$key]  = $row['bid'];
   }
-  
+  // make sure the first round scores are before
+  // the second round scores
   array_multisort($bid, SORT_ASC,  $team_ranks);
   return $team_ranks;
 }
@@ -426,10 +428,6 @@ function _scorecreep_get_all_opponents(&$team, &$teams) {
     }
     $opponents[] = $teams_in_bout[$i];
   }
-  // get nids for all the nodes in the bouts
-  // this might not work with an array?
-  // $nids = (array)taxonomy_select_nodes($terms, FALSE); 
-  // go through the nids
   return $opponents;
 }
 
@@ -499,7 +497,7 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
   if (isset($nodes)) {
     foreach ($nodes as $node) {
       if ($node->type == 'scorecreep_team') {
-	$team_rank = array();
+        $team_rank = array();
         $team = $node;
         $team->scorecreep_ranks = _scorecreep_get_ranks_for_team($team);
         $team->scorecreep_total_rank = null;
@@ -519,11 +517,12 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
         $team_rank['total_score'] = $team->scorecreep_total_score;
         $teams[$team->nid] = $team;
         if (isset($team_rank['total_rank'])) {
-        $ranks[] = $team_rank;
-	}
+          $ranks[] = $team_rank;
+        }
       }
     }
     // set ranks
+    // TODO handle old tournaments that didn't use RS
     _scorecreep_get_relative_strength($teams);
 
     for ($i = 0; $i < count($ranks); $i++) {
@@ -536,12 +535,8 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
     $ranks = sort_total_ranks($ranks);
   }
 
-  // get relative strength
-
-  // return array
   return $ranks;
 }
-
 
 function _scorecreep_get_ranks_for_all_group_pieces($term) {
   $nps_bout_terms = taxonomy_get_children($term);

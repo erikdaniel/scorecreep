@@ -1,0 +1,24 @@
+<?php
+/**
+ * @file
+ * Scorecreep Semis
+ * The Semi final bout submodule for Scorecreep
+ */
+
+
+function scorecreep_semis_menu() {
+  $items['node/%node/prelim-bouts'] = array(
+    'title' => 'Semi-finals',
+    'description' => 'Semi-final bouts for this tournament.',
+    'page callback' => 'scorecreep_semis_bouts_list',
+    'page arguments' => array(1),
+    'access callback' => 'scorecreep_access',
+    'access arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 2,
+    'file' => 'scorecreep_semis.pages.inc',
+  );
+
+  return $items;
+
+}
