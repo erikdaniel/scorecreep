@@ -16,6 +16,17 @@ module_load_include('inc', 'scorecreep', 'scorecreep.utils');
  * mode that will live at http://example.com/?q=examples/scorecreep
  */
 function scorecreep_menu() {
+  $items['node/%node/teams'] = array(
+    'title' => 'Teams',
+    'page callback' => 'tournament_teams_page',
+    'access callback' => 'scorecreep_access',
+    'access arguments' => array(1),
+    'page arguments' => array(1),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'scorecreep.pages.inc',
+    'weight' => 9,
+  );
+ 
   $items['node/%node/scores'] = array(
     'title' => 'Prelim Scores',
     'page callback' => 'tournament_scores_page',
@@ -164,11 +175,12 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
   // only edit the form if this is a bout.
   if (isset($bout_id)) {
     $bout_node_id = _scorecreep_get_bout_node_id_from_tid($bout_id);
+    $bout_type = _scorecreep_get_bout_type_from_nid($bout_node_id->nid);
     $form_state['scorecreep']['bout'] = $bout_node_id->nid;
 
     $alias = drupal_lookup_path('alias', 'node/' . $bout_id);
 
-    $teams =  _scorecreep_get_teams_in_bout_by_tid($bout_id);
+    $teams =  _scorecreep_get_teams_in_bout_by_tid($bout_id, $bout_type);
     $team_ids = array();
 
     $options = $form['field_performance_team']['und']['#options'];
@@ -344,10 +356,13 @@ function scorecreep_disable() {
  */
 function scorecreep_node_load($nodes, $types) {
   foreach ($nodes as $node) {
-    if (_scorecreep_get_bout_type($node) == 'team') {
-      $bout_tid = $node->field_bout['und'][0]['tid'];
-      $teams_in_bout = array_keys(_scorecreep_get_teams_in_bout_by_tid($bout_tid));
-      $node->scorecreep_teams = node_load_multiple($teams_in_bout);
+    if ($node->type == SCORECREEP_BOUT_NODE_TYPE) {
+      $bout_type = _scorecreep_get_bout_type($node);
+      if ($bout_type == PRELIM_BOUT_TYPE || $bout_type == SEMIFINAL_BOUT_TYPE) {
+        $bout_tid = $node->field_bout['und'][0]['tid'];
+        $teams_in_bout = array_keys(_scorecreep_get_teams_in_bout_by_tid($bout_tid, $bout_type));
+        $node->scorecreep_teams = node_load_multiple($teams_in_bout);
+      }
     }
     else if ($node->type == 'scorecreep_team') {
       $team = array($node->nid);
@@ -362,48 +377,60 @@ function scorecreep_node_load($nodes, $types) {
  * Implements hook_node_view.
  */
 function scorecreep_node_view($node, $view_mode, $langcode) {
-  $bout_type = _scorecreep_get_bout_type($node);
-  if ($bout_type == 'team') {
-    $teams = array();
-    foreach ($node->scorecreep_teams as $team) {
-      $team_array = array(
-        'data' => t($team->title) . ' <span class="team-city">(' .  t($team->field_team_city['und'][0]['value']) . ", ".  t($team->field_team_state['und'][0]['value']) . ')</span>',
-        'children' => array(),
-      );
-      $count = 1;
-      foreach ($team->scorecreep_performers as $performer) {
-        $team_array['children'][] = $count . ' ' . t($performer->name); 
-        $count++;
+  if ($node->type == SCORECREEP_BOUT_NODE_TYPE) {
+    $bout_type = _scorecreep_get_bout_type($node);
+    if ($bout_type == PRELIM_BOUT_TYPE || $bout_type == SEMIFINAL_BOUT_TYPE) {
+      $teams = array();
+      foreach ($node->scorecreep_teams as $team) {
+        $team_array = array(
+          'data' => t($team->title) . ' <span class="team-city">(' .  t($team->field_team_city['und'][0]['value']) . ", ".  t($team->field_team_state['und'][0]['value']) . ')</span>',
+          'children' => array(),
+        );
+        $count = 1;
+        foreach ($team->scorecreep_performers as $performer) {
+          $team_array['children'][] = $count . ' ' . t($performer->name); 
+          $count++;
+        }
+        $teams[] = $team_array;
       }
-      $teams[] = $team_array;
-    }
-    $arr = array(
-      '#theme' => 'item_list',
-      "#items" => $teams,
-      "#attributes" => array(
-        "class" => "scorecreep-teams",
-      ),
-    );
-    $node->content['scorecreep_performer_list'] = $arr;
-    $node->content['scorecreep_grid'] = array(
-        "#type" => 'markup',
-        "#prefix" => "<div class='scorecreep-grid-4x4",
-        "#markup" => "replace me",
-        "#suffix" => "</div>",
-    );
-    
-    $node->scorecreep_order = array(
-      array("A", "B", "C", "D"),
-      array( "C", "A", "D", "B"),
-      array("D", "C", "B", "A"),
-      array("B", "D", "A", "C"),
-    );
-    
-    // Total Scores
-    _scorecreep_bout_total_scores_view($node);  
+      $arr = array(
+        '#theme' => 'item_list',
+        "#items" => $teams,
+        "#attributes" => array(
+          "class" => "scorecreep-teams",
+        ),
+      );
+      $node->content['scorecreep_performer_list'] = $arr;
+      $node->content['scorecreep_grid'] = array(
+          "#type" => 'markup',
+          "#prefix" => "<div class='scorecreep-grid-4x4",
+          "#markup" => "replace me",
+          "#suffix" => "</div>",
+      );
+      
+      $node->scorecreep_order = array(
+        array("A", "B", "C", "D"),
+        array( "C", "A", "D", "B"),
+        array("D", "C", "B", "A"),
+        array("B", "D", "A", "C"),
+      );
+      
+      // Total Scores
+      _scorecreep_bout_total_scores_view($node);  
 
-    // Scores by rotation (view)
-    _scorecreep_bout_scores_by_rotation($node);
+      // Scores by rotation (view)
+      _scorecreep_bout_scores_by_rotation($node);
+    }
+  }
+  else if ($node->type == SCORECREEP_TEAM_NODE_TYPE) {
+    // Link Bout Terms to Bouts instead of taxonomy pages
+    if (isset($node->field_team_bouts['und'])) {
+      for ($i = 0; $i <  count($node->field_team_bouts[$node->language]); $i++) {
+        $term = $node->field_team_bouts[$node->language][$i];
+        $bout_node = _scorecreep_get_bout_node_id_from_tid($term['tid']);
+        $node->content['field_team_bouts'][$i]['#href'] = 'node/' . $bout_node->nid;
+      }
+    }
   }
 }
 

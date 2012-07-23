@@ -1,8 +1,10 @@
 <?php
 define("NUM_ROTATIONS", 4);
+define("SCORECREEP_BOUT_NODE_TYPE", "scorecreep_bout");
 define("PRELIM_BOUT_TYPE", "team");
 define("SEMIFINAL_BOUT_TYPE", "team_semifinal");
 define("FINAL_BOUT_TYPE", "team_final");
+define("SCORECREEP_TEAM_NODE_TYPE", "scorecreep_team");
 
 /** 
  * Callback to return the node id from a given string.
@@ -61,7 +63,7 @@ function scorecreep_get_tournament_term($node) {
  */
 function _scorecreep_get_bout_type($node) {
   $bout_type = NULL;
-  if ($node->type == 'scorecreep_bout' && isset($node->field_bout_type[$node->language])) {
+  if ($node->type == SCORECREEP_BOUT_NODE_TYPE && isset($node->field_bout_type[$node->language])) {
     $bout_type = $node->field_bout_type[$node->language][0]['value'];
   }
   return $bout_type;  
@@ -215,13 +217,16 @@ function _scorecreep_get_team_names(&$teams) {
   return $result->fetchAllAssoc('nid');
 }
 
-function _scorecreep_get_teams_in_bout_by_tid($tid) {
+function _scorecreep_get_teams_in_bout_by_tid($tid, $type = PRELIM_BOUT_TYPE) {
+  $table = 'field_team_bouts';
+  if ($type == SEMIFINAL_BOUT_TYPE) {
+    $table = 'field_semifinals';
+  }
  $query = new EntityFieldQuery();
-
   $query
     ->entityCondition('entity_type', 'node', '=')
     ->propertyCondition('type', 'scorecreep_team', '=')
-    ->fieldCondition('field_team_bouts', 'tid', $tid, '=');
+    ->fieldCondition($table, 'tid', $tid, '=');
   $arr = $query->execute();
   return $arr['node'];
 }
@@ -234,6 +239,15 @@ function _scorecreep_get_bout_node_id_from_tid($tid) {
     ->fieldCondition('field_bout', 'tid', $tid, '=');
   $arr = $query->execute();
   return  array_shift(array_values($arr['node']));
+}
+
+function _scorecreep_get_bout_type_from_nid($nid) {
+  $query = db_select('field_data_field_bout_type', 'fd');
+    $query->addField('fd', 'field_bout_type_value');
+    $query->condition("fd.entity_id", $nid, "=");  
+                  
+  $arr = array_shift(array_values($query->execute()->fetchAll(PDO::FETCH_ASSOC)));
+  return $arr['field_bout_type_value'];
 }
 
 function _scorecreep_get_performers_from_team_id(&$team) {

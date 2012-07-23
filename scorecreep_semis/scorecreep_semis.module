@@ -7,7 +7,7 @@
 
 
 function scorecreep_semis_menu() {
-  $items['node/%node/prelim-bouts'] = array(
+  $items['node/%node/semifinal-bouts'] = array(
     'title' => 'Semi-finals',
     'description' => 'Semi-final bouts for this tournament.',
     'page callback' => 'scorecreep_semis_bouts_list',
@@ -18,7 +18,5 @@ function scorecreep_semis_menu() {
     'weight' => 2,
     'file' => 'scorecreep_semis.pages.inc',
   );
-
   return $items;
-
 }

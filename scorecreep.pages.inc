@@ -1,5 +1,20 @@
 <?php
 /**
+ * Display the tournament_teams_list view, passing in the tid for the tournament.
+ */
+function tournament_teams_page($node) {
+  drupal_set_title($node->title . ' : Teams');
+  $view = views_get_view('tournament_teams_list');
+  $term = scorecreep_get_tournament_term($node);
+  $args = array();
+  if (isset($term)) {
+    $args[] = $term->tid;
+  }
+  return $view->execute_display('default', $args);
+}
+
+
+/**
  * Display the tournament_bouts_list view, passing in the tid for the tournament.
  */
 function scorecreep_bouts_list($node) {
