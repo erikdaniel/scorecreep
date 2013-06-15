@@ -2,13 +2,13 @@
 
 /**
  * @file
- * Custom content for PSi Scorecreep module. 
+ * Custom content for PSi Scorecreep module.
  * This module is designed to keep score for the National Poetyr Slam.
  * @see http://poetryslam.com
  * @see http://nps2011.com
  */
-module_load_include('inc', 'node', 'node.pages');   
-module_load_include('inc', 'scorecreep', 'scorecreep.utils');   
+module_load_include('inc', 'node', 'node.pages');
+module_load_include('inc', 'scorecreep', 'scorecreep.utils');
 /**
  * Implements hook_menu().
  *
@@ -26,7 +26,7 @@ function scorecreep_menu() {
     'file' => 'scorecreep.pages.inc',
     'weight' => 9,
   );
- 
+
   $items['node/%node/scores'] = array(
     'title' => 'Prelim Scores',
     'page callback' => 'tournament_scores_page',
@@ -37,7 +37,7 @@ function scorecreep_menu() {
     'file' => 'scorecreep.pages.inc',
     'weight' => 10,
   );
-  
+
   $items['node/%node/grouppieces'] = array(
     'title' => 'Group Piece Scores',
     'page callback' => 'tournament_group_scores_page',
@@ -48,7 +48,7 @@ function scorecreep_menu() {
     'weight' => 11,
     'file' => 'scorecreep.pages.inc',
   );
-  
+
   $items['node/%node/prelim-bouts'] = array(
     'title' => 'Bouts',
     'description' => 'Bouts for this tournament.',
@@ -138,7 +138,7 @@ function performance_add($bout_term) {
 
 /**
  * Implements hook_form_FORM_ID_alter().
- * 
+ *
  * Display the Tournament along with the team name in the select box on user create/edit form.
  */
 function scorecreep_form_alter(&$form, &$form_state, $form_id) {
@@ -163,7 +163,7 @@ function scorecreep_form_alter(&$form, &$form_state, $form_id) {
  */
 function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_state, $form_id) {
   $bout_id = null;
-  
+
   if (isset($form_state['build_info']['args'][1]->bout_id)) {
     $bout_id = $form_state['build_info']['args'][1]->bout_id;
   }
@@ -190,22 +190,23 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
       $team_ids[] = $key;
     }
     $form['field_performance_team']['und']['#options'] = $newarr;
-    
-    $num_perfs_in_bout =  count(_scorecreep_get_performances_in_bout($bout_id)); 
+
+    $num_perfs_in_bout =  count(_scorecreep_get_performances_in_bout($bout_id));
     $rotation = 1;
+    $num_teams = count($team_ids);
     // TODO make this more flexibile
     // read the # rotations from tourney node
     // compare to # teams and # performances
     // break it out into its own function
-    if ($num_perfs_in_bout < 4) {
+    if ($num_perfs_in_bout < $num_teams) {
     }
-    else if ($num_perfs_in_bout < 8) {
+    else if ($num_perfs_in_bout < ($num_teams * 2)) {
       $rotation = 2;
     }
-    else if ($num_perfs_in_bout < 12) {
+    else if ($num_perfs_in_bout < ($num_teams * 3)) {
       $rotation = 3;
     }
-    else if ($num_perfs_in_bout < 16) {
+    else if ($num_perfs_in_bout < ($num_teams * 4)) {
       $rotation = 4;
     }
     else {
@@ -231,7 +232,7 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
     $form['field_bout']['und']['#value'] =  $bout_id;
 
     // Add our custom submit handler.
-    $form['actions']['submit']['#submit'][] = 'scorecreep_performance_set_redirect'; 
+    $form['actions']['submit']['#submit'][] = 'scorecreep_performance_set_redirect';
   }
 }
 
@@ -272,7 +273,7 @@ function scorecreep_block_view($delta = '') {
   // TODO This shouldn't rely on the path
   // Check for 'node' in args and load the node,
   // THen check for node type, and bout type
-  // if its a team bout, get the bout term and go 
+  // if its a team bout, get the bout term and go
   // from there.
   switch ($delta) {
     case 'team_scores':
@@ -358,10 +359,19 @@ function scorecreep_node_load($nodes, $types) {
   foreach ($nodes as $node) {
     if ($node->type == SCORECREEP_BOUT_NODE_TYPE) {
       $bout_type = _scorecreep_get_bout_type($node);
-      if ($bout_type == PRELIM_BOUT_TYPE || $bout_type == SEMIFINAL_BOUT_TYPE) {
+      $node->scorecreep_teams = array();
+      if ($bout_type == PRELIM_BOUT_TYPE) {
         $bout_tid = $node->field_bout['und'][0]['tid'];
         $teams_in_bout = array_keys(_scorecreep_get_teams_in_bout_by_tid($bout_tid, $bout_type));
         $node->scorecreep_teams = node_load_multiple($teams_in_bout);
+      }
+      else if ($bout_type == SEMIFINAL_BOUT_TYPE) {
+        $bout_tid = $node->field_bout['und'][0]['tid'];
+        $teams_in_bout_by_tid =  _scorecreep_get_teams_in_bout_by_tid($bout_tid, $bout_type);
+        if (is_array($teams_in_bout_by_tid)) {
+          $teams_in_bout = array_keys($teams_in_bout_by_tid);
+          $node->scorecreep_teams = node_load_multiple($teams_in_bout);
+        }
       }
     }
     else if ($node->type == 'scorecreep_team') {
@@ -388,7 +398,7 @@ function scorecreep_node_view($node, $view_mode, $langcode) {
         );
         $count = 1;
         foreach ($team->scorecreep_performers as $performer) {
-          $team_array['children'][] = $count . ' ' . t($performer->name); 
+          $team_array['children'][] = $count . ' ' . t($performer->name);
           $count++;
         }
         $teams[] = $team_array;
@@ -407,16 +417,16 @@ function scorecreep_node_view($node, $view_mode, $langcode) {
           "#markup" => "replace me",
           "#suffix" => "</div>",
       );
-      
+
       $node->scorecreep_order = array(
         array("A", "B", "C", "D"),
         array( "C", "A", "D", "B"),
         array("D", "C", "B", "A"),
         array("B", "D", "A", "C"),
       );
-      
+
       // Total Scores
-      _scorecreep_bout_total_scores_view($node);  
+      _scorecreep_bout_total_scores_view($node);
 
       // Scores by rotation (view)
       _scorecreep_bout_scores_by_rotation($node);
@@ -444,7 +454,7 @@ function _scorecreep_bout_total_scores_view(&$node) {
     foreach ($entries as $entry) {
       // Sanitize the data before handing it off to the theme layer.
       $e = array_map('check_plain', $entry);
-      $rows[] = array('team' => $e['team'], 
+      $rows[] = array('team' => $e['team'],
                       'rank' => $e['rank'],
                       'score' => $e['score']
                       );
@@ -476,6 +486,6 @@ function _scorecreep_bout_scores_by_rotation(&$node) {
   if (isset($bout_id)) {
     $args[] = $bout_id;
   }
-  
+
   $node->content['rotation-scores'] =  $view->execute_display('default', $args);
 }

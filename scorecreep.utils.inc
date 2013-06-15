@@ -228,7 +228,12 @@ function _scorecreep_get_teams_in_bout_by_tid($tid, $type = PRELIM_BOUT_TYPE) {
     ->propertyCondition('type', 'scorecreep_team', '=')
     ->fieldCondition($table, 'tid', $tid, '=');
   $arr = $query->execute();
-  return $arr['node'];
+  if (isset($arr['node'])) {
+    return $arr['node'];
+  }
+  else {
+    return null;
+  }
 }
 
 function _scorecreep_get_bout_node_id_from_tid($tid) {
@@ -468,15 +473,16 @@ function sort_total_ranks($ranks) {
     $strength_flag = (isset($row['relative_strength']) && $row['relative_strength'] > 0);
     $stren[] = $row['relative_strength'];
   }
-
+  // TODO This wasn't ranking with the strength properly check it!!
   // Sort the data with rank ascending, score descending
   // Add $ranks as the last parameter, to sort by the common key
   if(!empty($ranks)) {
-    if(count($stren) > 74) {//TODO fix this
+    if(count($stren) > 72) {//TODO fix this
       array_multisort($rank, SORT_ASC, $strength, SORT_ASC, $score, SORT_DESC, $ranks);
     }
     else {
-      array_multisort($rank, SORT_ASC, $score, SORT_DESC, $ranks);
+      array_multisort($rank, SORT_ASC, $strength, SORT_ASC, $score, SORT_DESC, $ranks);
+      //array_multisort($rank, SORT_ASC, $score, SORT_DESC, $ranks);
     }
   }
   // we are sorted add the ranking numbers as set a new array in 
