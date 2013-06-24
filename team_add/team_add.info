@@ -1,0 +1,9 @@
+name = Team Add
+description = Add users to teams in an easier fashion.
+package = PSi
+core = 7.x
+files[] = team_add.module
+dependencies[] = scorecreep
+
+;dependencies[] = autoload
+;php = 5.2

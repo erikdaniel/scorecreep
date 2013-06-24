@@ -1,0 +1,124 @@
+<?php
+
+/**
+ * @file
+ *
+ * Add a team member user to a team.
+ *
+ * The team is a reference of the user, not the team,
+ * but it would be nice to be able to add the reference
+ * via the team context as well. This does that.
+ */
+
+define('SCORECREEP_TEAM_TYPE', 'scorecreep_team');
+
+/**
+ * Implements hook_menu().
+ */
+function team_add_menu() {
+    $items['node/%team_content/add_members'] = array(
+        'title' => 'Add members',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('team_add_form', 1),
+        'access callback' => 'user_access',
+        'access arguments' => array('edit team content'),
+        'type' => MENU_LOCAL_TASK,
+    );
+    $items['team/autocomplete'] = array(
+        'page callback' => '_team_add_autocomplete',
+        'access callback' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+    return $items;
+}
+
+function team_content_load($arg) {
+    $node = node_load($arg);
+    if ($node->type == SCORECREEP_TEAM_TYPE) {
+        return $node;
+    }
+    return FALSE;
+}
+
+function _team_add_autocomplete($string = '') {
+  $matches = array();
+  if ($string) {
+    $result = db_select('users')->fields('users', array('name'))->condition('name', db_like($string) . '%', 'LIKE')->range(0, 10)->execute();
+    foreach ($result as $user) {
+      $matches[$user->name] = check_plain($user->name);
+    }
+  }
+
+  drupal_json_output($matches);
+}
+
+function team_add_form($form, &$form_state, $node) {
+    $form['add_member'] = array(
+        '#title' => t('Add Member'),
+        '#type' => 'fieldset',
+        '#description' => t('Please select a team member.'),
+    );
+    $form['add_member']['team_member'] = array(
+        '#title' => t('Member name'),
+        '#type' => 'textfield',
+        '#required' => TRUE,
+        '#maxlength' => 60,
+        '#autocomplete_path' => 'team/autocomplete',
+    );
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Submit')
+    );
+    return $form;
+}
+
+
+
+/**
+ * Validate the form.
+ */
+function team_add_form_validate($form, &$form_state) {
+    $user = user_load_by_name($form_state['values']['team_member']);
+
+    if (null == $user) {
+        form_set_error('team_member', t('This user does not exist.'));
+    }
+
+    $user_wrapper = entity_metadata_wrapper('user', $user);
+    $field_val = $user_wrapper->field_teams->value();
+    $team = $form_state['build_info']['args'][0];
+    if (_team_add_has_value($field_val, $team->nid)) {
+        form_set_error('team_member', t('This user is already on this team.'));
+    }
+
+}
+
+/**
+* Handle post-validation form submission.
+*/
+function team_add_form_submit($form, &$form_state) {
+    $name = $form_state['values']['team_member'];
+    $user = user_load_by_name($name);
+    $node = array_pop($form_state['build_info']['args']);
+
+    $user->field_teams['und'][] = array(
+        'target_id' => $node->vid
+    );
+    user_save($user);
+
+    drupal_set_message(t('%name added to %team.',
+        array('%name' => $name, '%team' => $node->title )));
+
+}
+
+/**
+ * Check if a value is in a set of field values.
+ */
+function _team_add_has_value($values, $key) {
+    foreach ($values as $k => $val) {
+        if ($val->vid == $key) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
