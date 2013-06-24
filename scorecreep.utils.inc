@@ -6,7 +6,7 @@ define("SEMIFINAL_BOUT_TYPE", "team_semifinal");
 define("FINAL_BOUT_TYPE", "team_final");
 define("SCORECREEP_TEAM_NODE_TYPE", "scorecreep_team");
 
-/** 
+/**
  * Callback to return the node id from a given string.
  *
  * @param $str
@@ -23,7 +23,7 @@ function bout_id_or_alias_load($str) {
     $bid = $str;
   }
   else {
-    $bid = drupal_lookup_path('source', 'scorecreep/bout/' . $str); 
+    $bid = drupal_lookup_path('source', 'scorecreep/bout/' . $str);
     if ($bid) {
       $arr = explode('/', $bid);
       $bid = $arr[1];
@@ -36,7 +36,7 @@ function bout_id_or_alias_load($str) {
  * Callback to return the bout term id from a given string.
  */
 function bout_term_id_load($str) {
-  $term = false; 
+  $term = false;
   $bout_term_id = false;
   $arr = explode('-', $str);
   $tournament = array_shift(array_values(taxonomy_get_term_by_name($arr[0])));
@@ -66,7 +66,7 @@ function _scorecreep_get_bout_type($node) {
   if ($node->type == SCORECREEP_BOUT_NODE_TYPE && isset($node->field_bout_type[$node->language])) {
     $bout_type = $node->field_bout_type[$node->language][0]['value'];
   }
-  return $bout_type;  
+  return $bout_type;
 }
 
 
@@ -75,7 +75,7 @@ function _scorecreep_get_bout_type($node) {
  *
  * @param $scores
  *    scores from database
- * 
+ *
  * @return
  *    Array containing team id, name, rank, and score.
  */
@@ -232,7 +232,7 @@ function _scorecreep_get_teams_in_bout_by_tid($tid, $type = PRELIM_BOUT_TYPE) {
     return $arr['node'];
   }
   else {
-    return null;
+    return array();
   }
 }
 
@@ -249,8 +249,8 @@ function _scorecreep_get_bout_node_id_from_tid($tid) {
 function _scorecreep_get_bout_type_from_nid($nid) {
   $query = db_select('field_data_field_bout_type', 'fd');
     $query->addField('fd', 'field_bout_type_value');
-    $query->condition("fd.entity_id", $nid, "=");  
-                  
+    $query->condition("fd.entity_id", $nid, "=");
+
   $arr = array_shift(array_values($query->execute()->fetchAll(PDO::FETCH_ASSOC)));
   return $arr['field_bout_type_value'];
 }
@@ -266,7 +266,7 @@ function _scorecreep_get_performers_from_team_id(&$team) {
     $query->addField('tm', 'entity_id');
     $query->addField('tm', 'field_user_teams_nid');
     $query->addField('n', 'title');
-    $query->condition("tm.field_user_teams_nid", $team, 'IN');  
+    $query->condition("tm.field_user_teams_nid", $team, 'IN');
   $poets = $query->execute()->fetchAllAssoc('entity_id');//(PDO::FETCH_ASSOC);
   return  $poets;//array_shift(array_values($arr['user']));
 }
@@ -299,7 +299,7 @@ function _scorecreep_get_performances_by_rank($bout_id) {
   $result = $query->execute();
 
   $team_ids = array();
-  $poet_ids = array(); 
+  $poet_ids = array();
   $scores = array();
 
   $pids = array();
@@ -308,13 +308,13 @@ function _scorecreep_get_performances_by_rank($bout_id) {
       $pids[] = $record->nid;
     }
   }
-  $performances = entity_load('node', $pids);   
-  
+  $performances = entity_load('node', $pids);
+
   foreach ($performances as $perf) {
     //dvm($perf);
     $team_id = $perf->field_performance_team['und'][0]['nid'];
-    if (!in_array($team_id, $team_ids)) { 
-      $team_ids[] = $team_id; 
+    if (!in_array($team_id, $team_ids)) {
+      $team_ids[] = $team_id;
     }
 
     if (!empty($perf->field_performance_performer)) {
@@ -374,7 +374,7 @@ function _scorecreep_get_bout_scores($bout_id) {
   $query->addField('ftb', 'field_tiebreakwinner_value');
   $query->addField('ffr', 'field_rotation_value');
   $query->addField('fs', 'field_score_value');
-  $query->condition("fb.field_bout_tid", $bout_id);  
+  $query->condition("fb.field_bout_tid", $bout_id);
   $scores = $query->execute()->fetchAll(PDO::FETCH_ASSOC);
 
   return $scores;
@@ -453,11 +453,11 @@ function _scorecreep_get_all_opponents(&$team, &$teams) {
 function _scorecreep_get_relative_strength(&$teams) {
   foreach ($teams as $id => $team) {
     $ranks = 0;
-    $opponents = _scorecreep_get_all_opponents($team, $teams); 
+    $opponents = _scorecreep_get_all_opponents($team, $teams);
     for ($i = 0; $i < count($opponents); $i++) {
-      $ranks += $teams[$opponents[$i]]->scorecreep_total_rank;  
+      $ranks += $teams[$opponents[$i]]->scorecreep_total_rank;
     }
-    if (count($opponents) > 0) { 
+    if (count($opponents) > 0) {
       $team->scorecreep_relative_strength = number_format($ranks/count($opponents), 2);
     }
   }
@@ -485,9 +485,9 @@ function sort_total_ranks($ranks) {
       //array_multisort($rank, SORT_ASC, $score, SORT_DESC, $ranks);
     }
   }
-  // we are sorted add the ranking numbers as set a new array in 
+  // we are sorted add the ranking numbers as set a new array in
   // the order we want to display
-  $count = 1; 
+  $count = 1;
   foreach ($ranks as  $rank) {
     //if (array_key_exists('rank0', $rank)) {
       $rank_list[] = array(
@@ -526,12 +526,12 @@ function _scorecreep_get_ranks_for_all_teams($tourney_id) {
 
         // get total rank
         for ($i = 0; $i < count($team->scorecreep_ranks); $i++) {
-          $rank_label = 'rank' . $i; 
-          $score_label = 'score' . $i; 
+          $rank_label = 'rank' . $i;
+          $score_label = 'score' . $i;
           $team_rank[$rank_label] = $team->scorecreep_ranks[$i]['rank'];
           $team_rank[$score_label] = $team->scorecreep_ranks[$i]['score'];
-          $team->scorecreep_total_rank += $team->scorecreep_ranks[$i]['rank']; 
-          $team->scorecreep_total_score += $team->scorecreep_ranks[$i]['score']; 
+          $team->scorecreep_total_rank += $team->scorecreep_ranks[$i]['rank'];
+          $team->scorecreep_total_score += $team->scorecreep_ranks[$i]['score'];
         }
         $team_rank['total_rank'] = $team->scorecreep_total_rank;
         $team_rank['total_score'] = $team->scorecreep_total_score;
@@ -562,7 +562,7 @@ function _scorecreep_get_ranks_for_all_group_pieces($term) {
   $nps_bout_terms = taxonomy_get_children($term);
   $all_perfs = array();
   foreach ($nps_bout_terms as $bout_term) {
-     $all_perfs = array_merge( _scorecreep_get_performances_by_rank($bout_term->tid), $all_perfs); 
+     $all_perfs = array_merge( _scorecreep_get_performances_by_rank($bout_term->tid), $all_perfs);
   }
   usort($all_perfs, "array_sort_by_rank");
   $group_perfs = array();
@@ -596,14 +596,14 @@ function _scorecreep_group_piece_final_sort(&$group_pieces) {
 function _scorecreep_get_terms_for_teams($teams) {
   $query = db_select('field_data_field_term_tournament', 'fd');
     $query->addField('fd', 'entity_id');
-    $query->condition("fd.entity_id", $teams, "IN");  
+    $query->condition("fd.entity_id", $teams, "IN");
     $query->leftJoin('taxonomy_term_data', 'tt', 'fd.field_term_tournament_tid = tt.tid');
     $query->addField('tt', 'name');
-                  
+
   $arr = array_values($query->execute()->fetchAll(PDO::FETCH_ASSOC));
   $result = array();
   for ($i = 0; $i < count($arr); $i++) {
-    $result[$arr[$i]['entity_id']] = $arr[$i]['name']; 
+    $result[$arr[$i]['entity_id']] = $arr[$i]['name'];
   }
   return $result;
 }

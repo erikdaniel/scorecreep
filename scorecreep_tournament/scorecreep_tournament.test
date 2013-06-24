@@ -1,0 +1,43 @@
+<?php
+/**
+ * @file
+ *
+ * Tests for the first mod.
+ */
+
+class FirstTestCase extends DrupalWebTestCase {
+    protected $privileged_user;
+    // Methods
+
+    public function setUp() {
+        parent::setUp('first');
+        $settings = array(
+            'name' => 'Team Tournament',
+            'type' => 'team_tournament',
+        );
+
+        $type = $this->drupalCreateContentType($settings);
+
+        $this->privileged_user = $this->drupalCreateUser(array('create team_tournament content'));
+        $this->drupalLogin($this->privileged_user);
+    }
+
+    public static function getInfo() {
+        return array(
+            'name' => 'First module block functionality',
+            'description' => 'Test blocks in the first module.',
+            'group' => 'First',
+        );
+    }
+
+    public function testCreateTeamTournament() {
+        $tournament = array();
+        $tournament['title'] = $this->randomName(8);
+        $tournament["body[und][0][value]"] = $this->randomName(16);
+        $tournament["field_preliminary_bouts[und][0][value]"] = 10;
+        $tournament["field_semifinal_bouts[und][0][value]"] = 2;
+        $this->drupalPost('node/add/team_tournament', $tournament, t('Save'));
+        $this->verbose('Node created: ' . var_export($tournament, TRUE));
+    }
+}
+

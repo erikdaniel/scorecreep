@@ -1,0 +1,11 @@
+name = Scorecreep Tournament
+description = A sub-module to setup tournaments for the Scorecreep module.
+package = PSi
+core = 7.x
+files[] = scorecreep_tournament.module
+files[] = scorecreep_tournament.test
+
+dependencies[] = scorecreep
+
+;dependencies[] = autoload
+;php = 5.2

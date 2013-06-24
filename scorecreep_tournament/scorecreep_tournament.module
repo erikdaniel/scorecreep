@@ -1,0 +1,104 @@
+<?php
+/**
+ * @file
+ * A module.
+ *
+ * List the stuff.
+ *
+ */
+
+define('SCORECREEP_TOURNAMENT_TYPE', 'tournament');
+define('SCORECREEP_TOURNAMENT_TAXONOMY', 'tournament');
+
+/**
+ * Implements hook_help().
+ */
+function scorecreep_tournament_help($path, $arg) {
+    if ($path == 'admin/help#scorecreep_tournament') {
+        return t('A sub-module to setup tournaments for the scorecreep module.');
+    }
+}
+
+/**
+ * Implements hook_node_presave().
+ */
+function scorecreep_tournament_node_presave($node) {
+    if (empty($node->nid) && $node->type === SCORECREEP_TOURNAMENT_TYPE) {
+        $vocabulary = taxonomy_vocabulary_machine_name_load(SCORECREEP_TOURNAMENT_TAXONOMY);
+        $vid = $vocabulary->vid;
+        $term_name = strtolower($node->field_shortname['und'][0]['value']);
+
+        // Create tournament term
+        $tournament_tid = _scorecreep_tournament_create_taxonomy_term($term_name, $vid);
+        $node->field_category[$node->language][0]['tid'] = $tournament_tid;
+    }
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function scorecreep_tournament_node_insert($node) {
+    if ($node->type === SCORECREEP_TOURNAMENT_TYPE) {
+        $vocabulary = taxonomy_vocabulary_machine_name_load(SCORECREEP_TOURNAMENT_TAXONOMY);
+        $vid = $vocabulary->vid;
+
+        // Create tournament term
+        $tournament_tid = $node->field_category[$node->language][0]['tid'];
+
+        $num_prelims = $node->field_num_bouts['und'][0]['value'];
+        $num_semis = $node->field_num_semis['und'][0]['value'];
+
+        _scorecreep_tournament_create_bout('Bout', $vid, $tournament_tid, $num_prelims, $node);
+        _scorecreep_tournament_create_bout('Semifinal', $vid, $tournament_tid, $num_semis, $node);
+
+    }
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function scorecreep_tournament_node_delete($node) {
+    if ($node->type == SCORECREEP_TOURNAMENT_TYPE) {
+        $tournament_tid = $node->field_category[$node->language][0]['tid'];
+        taxonomy_term_delete($tournament_tid);
+    }
+
+}
+
+function _scorecreep_tournament_create_bout($type, $vid, $parent, $count, $tournament) {
+    $bout_type = $type == 'Semifinal' ? 'team_semifinal':'team';
+    $start_date = $tournament->field_dates['und'][0]['value'];
+    dpm($tournament);
+    for($i = 1; $i <= $count; $i++) {
+        $title = "$type $i";
+        $bout_term_id = _scorecreep_tournament_create_taxonomy_term("$type $i", $vid, $parent, $i);
+
+        $node = new stdClass();
+        $node->type = strtolower("scorecreep_bout");
+        node_object_prepare($node);
+
+        $node->title = $title;
+        $node->language = LANGUAGE_NONE;
+        $node->field_tournament[$node->language][0]['nid'] = $tournament->nid;
+        $node->field_bout[$node->language][0]['tid'] = $bout_term_id;
+        $node->field_bout_start_type[$node->language][0]['value'] = $start_date;
+        $node->field_round[$node->language][0]['value'] = 1;
+        $node->field_bout_type[$node->language][0]['value'] = $bout_type;
+        node_save($node);
+    }
+}
+
+/**
+* Create a taxonomy term and return the tid.
+*/
+function _scorecreep_tournament_create_taxonomy_term($name, $vid, $parent_id = 0, $weight = null) {
+  $term = new stdClass();
+  $term->name = $name;
+  $term->vid = $vid;
+  $term->parent = array($parent_id);
+  if (null != $weight) {
+      $term->weight = $weight;
+  }
+  taxonomy_term_save($term);
+  return $term->tid;
+}
