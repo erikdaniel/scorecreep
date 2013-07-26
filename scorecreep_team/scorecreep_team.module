@@ -1,0 +1,275 @@
+<?php
+
+/**
+ * @file
+ *
+ * Add a team member user to a team.
+ *
+ * The team is a reference of the user, not the team,
+ * but it would be nice to be able to add the reference
+ * via the team context as well. This does that.
+ */
+
+define('SCORECREEP_TEAM_TYPE', 'scorecreep_team');
+
+/**
+ * Implements hook_menu().
+ */
+function scorecreep_team_menu() {
+    $items['node/%team_content/add_members'] = array(
+        'title' => 'Add members',
+        /*
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('team_add_form', 1),
+         */
+        'page callback' => 'team_add_page',
+        'page arguments' => array(1),
+        'access callback' => 'user_access',
+        'access arguments' => array('administer content'),
+        'type' => MENU_LOCAL_TASK,
+    );
+    $items['team/autocomplete'] = array(
+        'page callback' => '_team_add_autocomplete',
+        'access callback' => TRUE,
+        'type' => MENU_CALLBACK,
+    );
+    return $items;
+}
+
+function team_content_load($arg) {
+    $node = node_load($arg);
+    if ($node->type == SCORECREEP_TEAM_TYPE) {
+        return $node;
+    }
+    return FALSE;
+}
+
+function _team_add_autocomplete($string = '') {
+  $matches = array();
+  if ($string) {
+    $result = db_select('users')->fields('users', array('name'))->condition('name', db_like($string) . '%', 'LIKE')->range(0, 10)->execute();
+    foreach ($result as $user) {
+      $matches[$user->name] = check_plain($user->name);
+    }
+  }
+
+  drupal_json_output($matches);
+}
+
+function team_add_form($form, &$form_state, $node) {
+    $form['add_member'] = array(
+        '#title' => t('Add Member'),
+        '#type' => 'fieldset',
+        '#description' => t('Enter a stage name here to find a poet.'),
+    );
+    $form['add_member']['team_member'] = array(
+        '#title' => t('Member name'),
+        '#type' => 'textfield',
+        '#required' => TRUE,
+        '#maxlength' => 60,
+        '#autocomplete_path' => 'team/autocomplete',
+    );
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Submit')
+    );
+    return $form;
+}
+
+function team_user_create_form($form, &$form_state, $node) {
+    $form['create_member'] = array(
+        '#title' => t('Enter new poet'),
+        '#type' => 'fieldset',
+        '#description' => t('Create a new team member.'),
+    );
+    $form['create_member']['stage_name'] = array(
+        '#title' => t('Stage name'),
+        '#type' => 'textfield',
+        '#maxlength' => 60,
+    );
+    $form['create_member']['first_name'] = array(
+        '#title' => t('First name'),
+        '#type' => 'textfield',
+        '#required' => TRUE,
+        '#maxlength' => 60,
+    );
+    $form['create_member']['last_name'] = array(
+        '#title' => t('Last name'),
+        '#type' => 'textfield',
+        '#required' => TRUE,
+        '#maxlength' => 60,
+    );
+
+    $form['create_member']['email'] = array(
+        '#title' => t('Email'),
+        '#type' => 'textfield',
+        '#maxlength' => 60,
+    );
+
+    $form['submit_new'] = array(
+        '#type' => 'submit',
+        '#value' => t('Submit')
+    );
+    return $form;
+
+
+
+}
+
+function team_add_page($node) {
+    $content = array(
+       'add_existing' => drupal_get_form('team_add_form', $node),
+       'create_new' => drupal_get_form('team_user_create_form', $node),
+   );
+    return $content;
+}
+
+
+
+/**
+ * Validate the form.
+ */
+function team_add_form_validate($form, &$form_state) {
+    $user = user_load_by_name($form_state['values']['team_member']);
+
+    if (null == $user) {
+        form_set_error('team_member', t('This user does not exist.'));
+    }
+
+    $user_wrapper = entity_metadata_wrapper('user', $user);
+    $field_val = $user_wrapper->field_user_teams->value();
+    $team = $form_state['build_info']['args'][0];
+    if (_team_add_has_value($field_val, $team->nid)) {
+        form_set_error('team_member', t('This user is already on this team.'));
+    }
+}
+
+/**
+ * Validate the form.
+ */
+function team_user_create_form_validate($form, &$form_state) {
+    $first_name = $form_state['values']['first_name'];
+    $last_name = $form_state['values']['last_name'];
+
+    if (empty($form_state['values']['stage_name'])) {
+        $stage_name = $first_name . ' ' . $last_name;
+        form_set_value($form['create_member']['stage_name'], $stage_name, $form_state);
+    } else {
+        $stage_name = $form_state['values']['stage_name'];
+    }
+    $valid_name = user_validate_name($stage_name);
+
+    if ($valid_name) {
+        form_set_error('stage_name', $valid_name);
+    }
+
+    if (empty($form_state['values']['email'])) {
+        $email = strtolower(preg_replace('/[^a-z_.A-Z]*/', '', $first_name) . '.' . preg_replace('/[^a-z_.A-Z]*/', '', $last_name) . '@my.poetryslam.com');
+    }
+
+    $user = user_load_by_name($stage_name);
+
+    if (null != $user) {
+        form_set_error('stage_name', t('This user already exists.'));
+    }
+
+    $user = user_load_by_mail($email);
+
+    if ($user) {
+        form_set_error('email', t('This email address already exists in the databases.'));
+    }
+}
+
+function team_user_create_form_submit($form, &$form_state) {
+    $first_name = $form_state['values']['first_name'];
+    $last_name = $form_state['values']['last_name'];
+
+    if (empty($form_state['values']['stage_name'])) {
+        $stage_name = $first_name . ' ' . $last_name;
+    } else {
+        $stage_name = $form_state['values']['stage_name'];
+    }
+
+    $first_name = $form_state['values']['first_name'];
+    $last_name = $form_state['values']['last_name'];
+    $password = user_password(8);
+    if (empty($form_state['values']['email'])) {
+        $email = strtolower(preg_replace('/[^a-z_.A-Z]*/', '', $first_name) . '.' . preg_replace('/[^a-z_.A-Z]*/', '', $last_name) . '@my.poetryslam.com');
+    }
+
+    $team = $form_state['build_info']['args'][0];
+
+    $fields = array(
+        'name' => $stage_name,
+        'mail' => $email,
+        'pass' => $password,
+        'status' => 1,
+        'init' => 'email address',
+        'roles' => array(
+            DRUPAL_AUTHENTICATED_RID => 'authenticated user',
+        ),
+        'field_stage_name' => array(
+            'und' => array(
+                0 => array(
+                    'value' => $stage_name,
+                )
+            )
+        ),
+        'field_first_name' => array(
+            'und' => array(
+                0 => array(
+                    'value' => $first_name,
+                )
+            )
+        ),
+        'field_last_name' => array(
+            'und' => array(
+                0 => array(
+                    'value' => $last_name,
+                )
+            )
+        ),
+        'field_user_teams' => array(
+            'und' => array(
+                0 => array(
+                    'target_id' => $team->nid,
+                ),
+            ),
+        ),
+    );
+    user_save('', $fields);
+
+    drupal_set_message(t('%name created and added to %team.',
+        array('%name' => $stage_name, '%team' => $team->title )));
+
+
+}
+
+/**
+* Handle post-validation form submission.
+*/
+function team_add_form_submit($form, &$form_state) {
+    $name = $form_state['values']['team_member'];
+    $user = user_load_by_name($name);
+    $node = array_pop($form_state['build_info']['args']);
+    $user->field_user_teams['und'][] = array(
+        'target_id' => $node->nid
+    );
+    user_save($user);
+
+    drupal_set_message(t('%name added to %team.',
+        array('%name' => $name, '%team' => $node->title )));
+
+}
+
+/**
+ * Check if a value is in a set of field values.
+ */
+function _team_add_has_value($values, $key) {
+    foreach ($values as $k => $val) {
+        if ($val->nid == $key) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}

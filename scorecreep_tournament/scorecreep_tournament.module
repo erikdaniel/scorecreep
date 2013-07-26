@@ -1,10 +1,13 @@
 <?php
 /**
  * @file
- * A module.
+ * A sub-module to the main scorecreep module.
+ * Create all the necessary taxonomy terms and bout
+ * nodes when a tournament is created.
  *
- * List the stuff.
  *
+ * TODO Delete bouts and performances when the
+ * tournament is deleted.
  */
 
 define('SCORECREEP_TOURNAMENT_TYPE', 'tournament');
@@ -50,7 +53,6 @@ function scorecreep_tournament_node_insert($node) {
 
         _scorecreep_tournament_create_bout('Bout', $vid, $tournament_tid, $num_prelims, $node);
         _scorecreep_tournament_create_bout('Semifinal', $vid, $tournament_tid, $num_semis, $node);
-
     }
 }
 
@@ -79,7 +81,7 @@ function _scorecreep_tournament_create_bout($type, $vid, $parent, $count, $tourn
 
         $node->title = $title;
         $node->language = LANGUAGE_NONE;
-        $node->field_tournament[$node->language][0]['nid'] = $tournament->nid;
+        $node->field_tournament[$node->language][0]['target_id'] = $tournament->nid;
         $node->field_bout[$node->language][0]['tid'] = $bout_term_id;
         $node->field_bout_start_type[$node->language][0]['value'] = $start_date;
         $node->field_round[$node->language][0]['value'] = 1;

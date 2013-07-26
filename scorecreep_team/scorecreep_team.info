@@ -1,8 +1,8 @@
-name = Team Add
+name = Scorecreep Team
 description = Add users to teams in an easier fashion.
 package = PSi
 core = 7.x
-files[] = team_add.module
+files[] = scorecreep_team.module
 dependencies[] = scorecreep
 
 ;dependencies[] = autoload

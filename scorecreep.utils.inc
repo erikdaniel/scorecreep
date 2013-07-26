@@ -6,31 +6,6 @@ define("SEMIFINAL_BOUT_TYPE", "team_semifinal");
 define("FINAL_BOUT_TYPE", "team_final");
 define("SCORECREEP_TEAM_NODE_TYPE", "scorecreep_team");
 
-/**
- * Callback to return the node id from a given string.
- *
- * @param $str
- *  A bout node id OR bout node alias.
- */
-function bout_id_or_alias_load($str) {
-  /* This may be a better way
-  if (arg(0) == 'node') {
-      $nid = arg(1);
-  }
-  */
-  $bid = FALSE;
-  if (is_int($str)) {
-    $bid = $str;
-  }
-  else {
-    $bid = drupal_lookup_path('source', 'scorecreep/bout/' . $str);
-    if ($bid) {
-      $arr = explode('/', $bid);
-      $bid = $arr[1];
-    }
-  }
-  return $bid;
-}
 
 /**
  * Callback to return the bout term id from a given string.
@@ -87,21 +62,21 @@ function _scorecreep_parse_bout_scores($scores) {
     foreach ($scores as $raw_score) {
       // Sanitize the data before handing it off to the theme layer.
       $score = array_map('check_plain', $raw_score);
-      if (!array_key_exists($score['field_performance_team_nid'], $bout_scores)) {
-          $bout_scores[$score['field_performance_team_nid']] = array(
-            'team_id' => $score['field_performance_team_nid'],
+      if (!array_key_exists($score['field_performance_team_target_id'], $bout_scores)) {
+          $bout_scores[$score['field_performance_team_target_id']] = array(
+            'team_id' => $score['field_performance_team_target_id'],
             'score' => $score['field_score_value'],
           );
-        $teams[] = $score['field_performance_team_nid'];
+        $teams[] = $score['field_performance_team_target_id'];
       }
       else {
-        $bout_scores[$score['field_performance_team_nid']]['score'] +=  (float)$score['field_score_value'];
+        $bout_scores[$score['field_performance_team_target_id']]['score'] +=  (float)$score['field_score_value'];
       }
       if ($score['field_rotation_value'] > NUM_ROTATIONS && $score['field_tiebreakwinner_value'] == 0) {
-        $bout_scores[$score['field_performance_team_nid']]['tiebreakloser'] = TRUE;
+        $bout_scores[$score['field_performance_team_target_id']]['tiebreakloser'] = TRUE;
       }
       else {
-        $bout_scores[$score['field_performance_team_nid']]['tiebreakloser'] = FALSE;
+        $bout_scores[$score['field_performance_team_target_id']]['tiebreakloser'] = FALSE;
       }
     }
 
@@ -257,18 +232,13 @@ function _scorecreep_get_bout_type_from_nid($nid) {
 
 function _scorecreep_get_performers_from_team_id(&$team) {
   $poets = array();
-  if (isset($arr['user']) ) {
-    $poets = $arr['user'];
-  }
-  $poets = array();
   $query = db_select('field_data_field_user_teams', 'tm');
-    $query->leftJoin('node', 'n', 'tm.field_user_teams_nid = n.nid');
+    $query->leftJoin('node', 'n', 'tm.field_user_teams_target_id = n.nid');
     $query->addField('tm', 'entity_id');
-    $query->addField('tm', 'field_user_teams_nid');
+    $query->addField('tm', 'field_user_teams_target_id');
     $query->addField('n', 'title');
-    $query->condition("tm.field_user_teams_nid", $team, 'IN');
-  $poets = $query->execute()->fetchAllAssoc('entity_id');//(PDO::FETCH_ASSOC);
-  return  $poets;//array_shift(array_values($arr['user']));
+    $query->condition("tm.field_user_teams_target_id", $team, 'IN');
+  return $query->execute()->fetchAllAssoc('entity_id');
 }
 
 function _scorecreep_get_performances_in_bout($bout_id) {
@@ -286,6 +256,7 @@ function _scorecreep_get_performances_in_bout($bout_id) {
 }
 
 function _scorecreep_get_performances_by_rank($bout_id) {
+    //TODO why doesnt' this work with entity ref?
  $query = new EntityFieldQuery();
 
   $query
@@ -309,10 +280,9 @@ function _scorecreep_get_performances_by_rank($bout_id) {
     }
   }
   $performances = entity_load('node', $pids);
-
   foreach ($performances as $perf) {
     //dvm($perf);
-    $team_id = $perf->field_performance_team['und'][0]['nid'];
+    $team_id = $perf->field_performance_team['und'][0]['target_id'];
     if (!in_array($team_id, $team_ids)) {
       $team_ids[] = $team_id;
     }
@@ -320,17 +290,16 @@ function _scorecreep_get_performances_by_rank($bout_id) {
     if (!empty($perf->field_performance_performer)) {
       $arr = $perf->field_performance_performer['und'];
       foreach ($arr as $p) {
-        if (!in_array($p['uid'], $poet_ids)) {
-          $poet_ids[] = $p['uid'];
+        if (!in_array($p['target_id'], $poet_ids)) {
+          $poet_ids[] = $p['target_id'];
         }
       }
     }
   }
   $poets = user_load_multiple($poet_ids);
   $teams = node_load_multiple($team_ids);
-
   foreach ($performances as $perf) {
-    $team_id = $perf->field_performance_team['und'][0]['nid'];
+    $team_id = $perf->field_performance_team['und'][0]['target_id'];
     $scores[] = array(
       'rank' => 0,
       'team_name' => $teams[$team_id]->title,
@@ -357,7 +326,7 @@ function _scorecreep_get_performers_in_performance($perf, $poets) {
   }
   $a = $perf['und'];
   for ($i = 0; $i < count($a); $i++) {
-    $poetnames[] = $poets[$a[$i]['uid']]->field_stage_name['und'][0]['safe_value'];
+    $poetnames[] = $poets[$a[$i]['target_id']]->field_stage_name['und'][0]['safe_value'];
   }
   return implode(', ', $poetnames);
 }
@@ -370,7 +339,7 @@ function _scorecreep_get_bout_scores($bout_id) {
   $query->leftJoin('field_data_field_bout', 'fb', 'fb.entity_id = fs.entity_id');
   $query->leftJoin('field_data_field_tiebreakwinner', 'ftb', 'ftb.entity_id = fs.entity_id');
   $query->leftJoin('field_data_field_rotation', 'ffr', 'ffr.entity_id = fs.entity_id');
-  $query->addField('pt', 'field_performance_team_nid');
+  $query->addField('pt', 'field_performance_team_target_id');
   $query->addField('ftb', 'field_tiebreakwinner_value');
   $query->addField('ffr', 'field_rotation_value');
   $query->addField('fs', 'field_score_value');

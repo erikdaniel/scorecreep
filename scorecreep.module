@@ -16,59 +16,59 @@ module_load_include('inc', 'scorecreep', 'scorecreep.utils');
  * mode that will live at http://example.com/?q=examples/scorecreep
  */
 function scorecreep_menu() {
-  $items['node/%node/teams'] = array(
+  $items['node/%scorecreep_content/teams'] = array(
     'title' => 'Teams',
     'page callback' => 'tournament_teams_page',
-    'access callback' => 'scorecreep_access',
-    'access arguments' => array(1),
     'page arguments' => array(1),
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'scorecreep.pages.inc',
     'weight' => 9,
   );
 
-  $items['node/%node/scores'] = array(
+  $items['node/%scorecreep_content/scores'] = array(
     'title' => 'Prelim Scores',
     'page callback' => 'tournament_scores_page',
-    'access callback' => 'scorecreep_access',
-    'access arguments' => array(1),
     'page arguments' => array(1),
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'scorecreep.pages.inc',
     'weight' => 10,
   );
 
-  $items['node/%node/grouppieces'] = array(
+  $items['node/%scorecreep_content/grouppieces'] = array(
     'title' => 'Group Piece Scores',
     'page callback' => 'tournament_group_scores_page',
     'page arguments' => array(1),
-    'access callback' => 'scorecreep_access',
-    'access arguments' => array(1),
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
     'type' => MENU_LOCAL_TASK,
     'weight' => 11,
     'file' => 'scorecreep.pages.inc',
   );
 
-  $items['node/%node/prelim-bouts'] = array(
+  $items['node/%scorecreep_content/prelim-bouts'] = array(
     'title' => 'Bouts',
     'description' => 'Bouts for this tournament.',
     'page callback' => 'scorecreep_bouts_list',
     'page arguments' => array(1),
-    'access callback' => 'scorecreep_access',
-    'access arguments' => array(1),
+    'access callback' => 'user_access',
+    'access arguments' => array('access content'),
     'type' => MENU_LOCAL_TASK,
     'weight' => 2,
     'file' => 'scorecreep.pages.inc',
   );
 
-  $items['node/%node/performances'] = array(
+  $items['node/%scorecreep_bout_content/performances'] = array(
     'title' => 'Performances',
     'page callback' => 'bout_page_performances',
     'page arguments' => array(1),
     'type' => MENU_LOCAL_TASK,
     'file' => 'scorecreep.pages.inc',
-    'access callback' => array('performance_tab_access'),
-    'access arguments' => array(1),
+    'access callback' => array('user_access'),
+    'access arguments' => array('access content'),
   );
 
   $items['scorecreep/bout/%bout_term_id/add/performance'] = array(
@@ -98,22 +98,20 @@ function scorecreep_menu() {
   return $items;
 }
 
-/**
- * Access callback for the performances tab.
- */
-function performance_tab_access($node) {
-  $bout_type = NULL;
-  if (isset($node->field_bout_type[$node->language])) {
-    $bout_type = $node->field_bout_type[$node->language][0]['value'];
-  }
-  return $node->type == 'scorecreep_bout' &&(!isset($bout_type) || $bout_type == 'team');// && user_access('view published content');
+function scorecreep_content_load($arg) {
+    $node = node_load($arg);
+    if ($node->type == 'tournament') {
+        return $node;
+    }
+    return FALSE;
 }
 
-/**
- * Access callback for scorecreep content
- */
-function scorecreep_access($node) {
-  return $node->type == 'tournament';
+function scorecreep_bout_content_load($arg) {
+    $node = node_load($arg);
+    if ($node->type == 'scorecreep_bout' && $node->field_bout_type[$node->language][0]['value'] == 'team') {
+        return $node;
+    }
+    return FALSE;
 }
 
 /**
@@ -123,6 +121,7 @@ function node_performance_add($node) {
   $bout_term = taxonomy_term_load($node->field_bout['und'][0]['tid']);
   return performance_add($bout_term);
 }
+
 /**
  * Returns a node submission form.
  */
@@ -137,11 +136,16 @@ function performance_add($bout_term) {
 }
 
 /**
- * Implements hook_form_FORM_ID_alter().
+ * Implements hook_form_alter().
  *
  * Display the Tournament along with the team name in the select box on user create/edit form.
  */
 function scorecreep_form_alter(&$form, &$form_state, $form_id) {
+    // TODO I converted this to autocomplete, to make adding a user to a team
+    // work in the team context
+    // On the edit form, that doesn't make much sense. so this will need a
+    // rework.
+    /*
   if ($form_id == 'user_profile_form' || $form_id == 'user_register_form') {
     $options = $form['field_user_teams']['und']['#options'];
     $keys = array_keys($options);
@@ -153,6 +157,7 @@ function scorecreep_form_alter(&$form, &$form_state, $form_id) {
       }
     }
   }
+     */
 }
 
 /**
@@ -181,23 +186,26 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
     $alias = drupal_lookup_path('alias', 'node/' . $bout_id);
 
     $teams =  _scorecreep_get_teams_in_bout_by_tid($bout_id, $bout_type);
-    $team_ids = array();
+    $team_nodes = node_load_multiple(array_keys($teams));
+    $team_ids = array_keys($team_nodes);
 
-    $options = $form['field_performance_team']['und']['#options'];
+    $options = array();
     $newarr = array('_none' => '- Select a value -');
-    foreach ($teams as $key => $val) {
-      $newarr[$key] = $options[$key];
-      $team_ids[] = $key;
+    foreach ($team_nodes as $key => $val) {
+      $newarr[$key] = check_plain($team_nodes[$key]->title);
     }
+    $form['field_performance_team']['und']['#theme'] = 'select';
     $form['field_performance_team']['und']['#options'] = $newarr;
 
     $num_perfs_in_bout =  count(_scorecreep_get_performances_in_bout($bout_id));
     $rotation = 1;
     $num_teams = count($team_ids);
-    // TODO make this more flexibile
+    // TODO make this more flexible
     // read the # rotations from tourney node
     // compare to # teams and # performances
     // break it out into its own function
+    //
+    // $rotation = ((int)$num_perfs_in_bout / $num_teams) + 1;
     if ($num_perfs_in_bout < $num_teams) {
     }
     else if ($num_perfs_in_bout < ($num_teams * 2)) {
@@ -216,12 +224,13 @@ function scorecreep_form_scorecreep_performance_node_form_alter(&$form, &$form_s
     $form['field_rotation']['und'][0]['value']['#default_value'] =  $rotation;
 
     // handle performers
-    $all_performers = $form['field_performance_performer']['und']['#options'];
+    //$all_performers = $form['field_performance_performer']['und']['#options'];
     $bout_performers =  _scorecreep_get_performers_from_team_id($team_ids);
+    $all_performers = user_load_multiple(array_keys($bout_performers));
     $new_performers = array('_none' => '- None -');
 
     foreach($bout_performers as $key => $val) {
-      $new_performers[$key] = '(' . $val->title . ') ' . $all_performers[$key];
+      $new_performers[$key] = '(' . $val->title . ') ' . $all_performers[$key]->name;
     }
     $form['field_performance_performer']['und']['#options'] = $new_performers;
 
@@ -414,7 +423,7 @@ function scorecreep_node_view($node, $view_mode, $langcode) {
       $node->content['scorecreep_performer_list'] = $arr;
       $node->content['scorecreep_grid'] = array(
           "#type" => 'markup',
-          "#prefix" => "<div class='scorecreep-grid-4x4",
+          "#prefix" => "<div class='scorecreep-grid-4x4'>",
           "#markup" => "replace me",
           "#suffix" => "</div>",
       );
@@ -455,18 +464,29 @@ function _scorecreep_bout_total_scores_view(&$node) {
     foreach ($entries as $entry) {
       // Sanitize the data before handing it off to the theme layer.
       $e = array_map('check_plain', $entry);
-      $rows[] = array('team' => $e['team'],
-                      'rank' => $e['rank'],
-                      'score' => $e['score']
+      $rows[] = array($e['rank'],
+                      $e['team'],
+                      $e['score'],
                       );
     }
     // Make a table for them.
     $header = array(t('Team'), t('Rank'), t('Score'));
     $node->content['total-scores'] = array(
         '#theme' => 'table',
-        '#header' => array(t('Team'), t('Rank'), t('Score')),
+        '#header' => array(
+            array(
+                "data" => t('Rank'),
+                "class" => array("scorecreep_rank_cell"),
+            ),
+            t('Team'),
+            array(
+                "data" => t('Score'),
+                "class" => array("scorecreep_rank_cell"),
+            ),
+        ),
+        '#prefix' => "<div class='total-scores-block'><h2 class='total-scores-title'>$subject</h2>",
         '#rows' => $rows,
-        '#prefix' => "<h2 class='total-scores-title'>$subject</h2>",
+        '#suffix' => '</div>',
     );
   }
   else {
@@ -487,6 +507,9 @@ function _scorecreep_bout_scores_by_rotation(&$node) {
   if (isset($bout_id)) {
     $args[] = $bout_id;
   }
-
-  $node->content['rotation-scores'] =  $view->execute_display('default', $args);
+  $node->content['rotation-scores'] =  array(
+        '#type' => 'markup',
+        '#prefix' => '<h2 class="rotations-title">' . t('Rotations') . '</h2>',
+        '#markup' => $view->execute_display('default', $args),
+  );
 }
